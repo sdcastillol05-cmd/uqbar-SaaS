@@ -1,304 +1,327 @@
 <!DOCTYPE html>
 <html lang="es" data-theme="dark">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Uqbar</title>
-  <link rel="stylesheet" href="style.css" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;1,14..32,400&family=Syne:wght@600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&display=swap" rel="stylesheet"/>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
 
-<!-- ════════════════════════════════════════
-     SCREEN: LOGIN
-════════════════════════════════════════ -->
+<!-- ══════ LOGIN ══════ -->
 <div id="screen-login" class="screen active">
-
-  <!-- Ambient background -->
-  <div class="login-ambient">
-    <div class="ambient-orb orb-1"></div>
-    <div class="ambient-orb orb-2"></div>
-    <div class="ambient-orb orb-3"></div>
-    <div class="ambient-grid"></div>
+  <div class="login-bg">
+    <div class="bg-orb bg-orb-1"></div>
+    <div class="bg-orb bg-orb-2"></div>
+    <div class="bg-orb bg-orb-3"></div>
+    <div class="bg-noise"></div>
   </div>
 
-  <div class="login-shell">
-
-    <!-- Brand pill -->
-    <div class="login-brand-pill">
-      <img src="logouq.png" alt="Uqbar" class="brand-pill-logo" />
-      <span class="brand-pill-name">Uqbar</span>
+  <div class="login-container">
+    <div class="login-left">
+      <div class="login-brand">
+        <img src="logouq.png" alt="Uqbar" class="login-logo-img"/>
+        <span class="login-logo-text">Uqbar</span>
+      </div>
+      <div class="login-hero-text">
+        <h1>Tu negocio,<br/><span class="gradient-text">en un solo lugar.</span></h1>
+        <p>Registra, visualiza y entiende lo que pasa en tu negocio cada día. Simple. Rápido. Tuyo.</p>
+      </div>
+      <div class="login-features">
+        <div class="lf-item"><i data-lucide="zap" class="lf-icon"></i><span>Listo en 30 segundos</span></div>
+        <div class="lf-item"><i data-lucide="shield" class="lf-icon"></i><span>Datos 100% privados</span></div>
+        <div class="lf-item"><i data-lucide="smartphone" class="lf-icon"></i><span>Funciona en cualquier dispositivo</span></div>
+      </div>
     </div>
 
-    <div class="login-card" id="login-card">
-
-      <!-- LOGIN -->
-      <div id="login-form-wrap" class="form-wrap">
-        <div class="form-header">
-          <h1 class="form-title">Buen día.</h1>
-          <p class="form-sub">Entra a tu espacio de trabajo</p>
-        </div>
-        <div class="field-group">
+    <div class="login-right">
+      <div class="login-card">
+        <div id="login-form-wrap" class="form-panel">
+          <div class="card-head">
+            <h2>Bienvenido</h2>
+            <p>Ingresa a tu espacio de trabajo</p>
+          </div>
           <div class="field">
-            <label>Correo</label>
-            <div class="field-input-wrap">
-              <i data-lucide="mail" class="field-icon"></i>
-              <input type="email" id="login-email" placeholder="tu@correo.com" autocomplete="email" />
+            <label>Correo electrónico</label>
+            <div class="fi-wrap">
+              <i data-lucide="mail" class="fi-ico"></i>
+              <input type="email" id="login-email" placeholder="nombre@correo.com" autocomplete="email"/>
             </div>
           </div>
           <div class="field">
             <label>Contraseña</label>
-            <div class="field-input-wrap">
-              <i data-lucide="lock" class="field-icon"></i>
-              <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password" />
-              <button class="field-eye" id="btn-eye-login" type="button" tabindex="-1">
-                <i data-lucide="eye" class="eye-icon"></i>
-              </button>
+            <div class="fi-wrap">
+              <i data-lucide="lock" class="fi-ico"></i>
+              <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password"/>
+              <button class="fi-eye" id="eye-login" type="button"><i data-lucide="eye"></i></button>
             </div>
           </div>
+          <div id="login-error" class="form-err hidden"></div>
+          <button class="btn-primary" id="btn-login">
+            <span>Entrar</span><i data-lucide="arrow-right"></i>
+          </button>
+          <p class="form-alt">¿Primera vez? <a href="#" id="to-register">Crea tu cuenta gratis</a></p>
         </div>
-        <div id="login-error" class="form-error hidden"></div>
-        <button class="btn-cta" id="btn-login">
-          <span>Entrar</span>
-          <i data-lucide="arrow-right" class="btn-icon"></i>
-        </button>
-        <p class="form-switch">¿Primera vez? <a href="#" id="link-to-register">Crea tu espacio</a></p>
-      </div>
 
-      <!-- REGISTER -->
-      <div id="register-form-wrap" class="form-wrap hidden">
-        <div class="form-header">
-          <h1 class="form-title">Empieza hoy.</h1>
-          <p class="form-sub">Listo en menos de un minuto</p>
-        </div>
-        <div class="field-group">
+        <div id="register-form-wrap" class="form-panel hidden">
+          <div class="card-head">
+            <h2>Empieza hoy</h2>
+            <p>Configura tu espacio en un minuto</p>
+          </div>
           <div class="field">
-            <label>Tu negocio</label>
-            <div class="field-input-wrap">
-              <i data-lucide="briefcase" class="field-icon"></i>
-              <input type="text" id="reg-business" placeholder="Ej: Panadería Luna" />
+            <label>Nombre de tu negocio</label>
+            <div class="fi-wrap">
+              <i data-lucide="briefcase" class="fi-ico"></i>
+              <input type="text" id="reg-business" placeholder="Ej: Estudio Creativo"/>
             </div>
           </div>
           <div class="field">
-            <label>Correo</label>
-            <div class="field-input-wrap">
-              <i data-lucide="mail" class="field-icon"></i>
-              <input type="email" id="reg-email" placeholder="tu@correo.com" />
+            <label>Correo electrónico</label>
+            <div class="fi-wrap">
+              <i data-lucide="mail" class="fi-ico"></i>
+              <input type="email" id="reg-email" placeholder="nombre@correo.com"/>
             </div>
           </div>
           <div class="field">
             <label>Contraseña</label>
-            <div class="field-input-wrap">
-              <i data-lucide="lock" class="field-icon"></i>
-              <input type="password" id="reg-password" placeholder="Mínimo 6 caracteres" />
+            <div class="fi-wrap">
+              <i data-lucide="lock" class="fi-ico"></i>
+              <input type="password" id="reg-password" placeholder="Mínimo 6 caracteres"/>
             </div>
           </div>
+          <div id="reg-error" class="form-err hidden"></div>
+          <button class="btn-primary" id="btn-register">
+            <span>Crear cuenta</span><i data-lucide="sparkles"></i>
+          </button>
+          <p class="form-alt">¿Ya tienes cuenta? <a href="#" id="to-login">Inicia sesión</a></p>
         </div>
-        <div id="reg-error" class="form-error hidden"></div>
-        <button class="btn-cta" id="btn-register">
-          <span>Crear mi espacio</span>
-          <i data-lucide="sparkles" class="btn-icon"></i>
-        </button>
-        <p class="form-switch">¿Ya tienes cuenta? <a href="#" id="link-to-login">Inicia sesión</a></p>
       </div>
-
+      <p class="login-legal">por <strong>Uqbar</strong> · <a href="https://uqbar.app" target="_blank">uqbar.app</a></p>
     </div>
-
-    <p class="login-footer-text">por <strong>Uqbar</strong> · <a href="https://www.uqbar.app" target="_blank">uqbar.app</a></p>
   </div>
 </div>
 
 
-<!-- ════════════════════════════════════════
-     SCREEN: DASHBOARD
-════════════════════════════════════════ -->
+<!-- ══════ DASHBOARD ══════ -->
 <div id="screen-dashboard" class="screen hidden">
 
   <!-- NAV -->
-  <nav class="navbar">
-    <div class="nav-left">
-      <div class="nav-logo-wrap">
-        <img src="logouq.png" alt="Uqbar" class="nav-logo" />
-        <span class="nav-brand">Uqbar</span>
+  <nav class="nav">
+    <div class="nav-l">
+      <div class="nav-brand">
+        <img src="logouq.png" alt="" class="nav-logo"/>
+        <span class="nav-name">Uqbar</span>
       </div>
-      <div class="nav-sep"></div>
-      <span class="nav-biz" id="topbar-biz-name">Mi negocio</span>
+      <div class="nav-divider"></div>
+      <span class="nav-biz" id="topbar-biz-name">—</span>
     </div>
-    <div class="nav-right">
-      <div class="nav-date" id="topbar-date"></div>
-      <!-- Theme toggle -->
-      <button class="btn-theme" id="btn-theme" title="Cambiar tema">
-        <i data-lucide="sun" class="theme-icon-light"></i>
-        <i data-lucide="moon" class="theme-icon-dark"></i>
+    <div class="nav-r">
+      <span class="nav-date" id="topbar-date"></span>
+      <button class="btn-icon-only" id="btn-theme" title="Cambiar tema">
+        <i data-lucide="sun" class="ico-light"></i>
+        <i data-lucide="moon" class="ico-dark"></i>
       </button>
-      <button class="btn-ghost-nav" id="btn-logout">
-        <i data-lucide="log-out"></i>
-        <span>Salir</span>
+      <button class="btn-ghost-sm" id="btn-logout">
+        <i data-lucide="log-out"></i><span>Salir</span>
       </button>
     </div>
   </nav>
 
-  <!-- HERO STATS -->
-  <div class="hero-stats">
-    <div class="hero-ambient">
-      <div class="hero-orb"></div>
+  <!-- HERO BAND -->
+  <section class="hero-band">
+    <div class="hb-ambient"><div class="hb-orb"></div></div>
+    <div class="hb-inner">
+
+      <!-- Greeting -->
+      <div class="hb-top">
+        <div class="hb-greeting">
+          <span id="greeting-time" class="gt-time">Buenos días</span>
+          <span id="greeting-biz" class="gt-biz">—</span>
+        </div>
+        <div class="hb-period-badge">
+          <i data-lucide="calendar-days"></i>
+          <span id="hb-month-label">Junio 2026</span>
+        </div>
+      </div>
+
+      <!-- 3 BIG STATS -->
+      <div class="big-stats">
+        <div class="bs-card bs-today">
+          <div class="bs-eyebrow"><i data-lucide="sun-medium"></i> Hoy</div>
+          <div class="bs-value" id="stat-hoy">$0</div>
+          <div class="bs-sub" id="bs-hoy-count">0 ingresos</div>
+          <div class="bs-progress"><div class="bs-bar green" id="bar-hoy"></div></div>
+        </div>
+        <div class="bs-card bs-week">
+          <div class="bs-eyebrow"><i data-lucide="trending-up"></i> Esta semana</div>
+          <div class="bs-value violet" id="stat-semana">$0</div>
+          <div class="bs-sub" id="bs-sem-count">0 ingresos</div>
+          <div class="bs-progress"><div class="bs-bar violet" id="bar-semana"></div></div>
+        </div>
+        <div class="bs-card bs-month">
+          <div class="bs-eyebrow"><i data-lucide="calendar"></i> Este mes</div>
+          <div class="bs-value blue" id="stat-mes">$0</div>
+          <div class="bs-sub" id="bs-mes-count">0 ingresos</div>
+          <div class="bs-progress"><div class="bs-bar blue" id="bar-mes"></div></div>
+        </div>
+      </div>
+
+      <!-- MINI STATS ROW -->
+      <div class="mini-row">
+        <div class="mini-stat">
+          <div class="ms-icon red"><i data-lucide="trending-down"></i></div>
+          <div class="ms-body">
+            <span class="ms-label">Egresos del mes</span>
+            <span class="ms-val red" id="stat-gastos">$0</span>
+          </div>
+        </div>
+        <div class="mini-stat">
+          <div class="ms-icon amber"><i data-lucide="activity"></i></div>
+          <div class="ms-body">
+            <span class="ms-label">Balance neto</span>
+            <span class="ms-val amber" id="stat-balance">$0</span>
+          </div>
+        </div>
+        <div class="mini-stat">
+          <div class="ms-icon green"><i data-lucide="receipt"></i></div>
+          <div class="ms-body">
+            <span class="ms-label">Movimientos totales</span>
+            <span class="ms-val green" id="stat-total-count">0</span>
+          </div>
+        </div>
+        <div class="mini-stat mini-stat-wide">
+          <div class="ms-icon violet"><i data-lucide="percent"></i></div>
+          <div class="ms-body">
+            <span class="ms-label">Margen del mes</span>
+            <span class="ms-val violet" id="stat-margen">—</span>
+          </div>
+        </div>
+      </div>
     </div>
-    <div class="hero-inner">
-      <div class="hero-greeting">
-        <span id="hero-greeting-text">Buenos días</span>
-        <span class="hero-greeting-biz" id="hero-biz-display"></span>
+  </section>
+
+  <!-- MAIN GRID -->
+  <div class="main-grid">
+
+    <!-- LEFT: registro + chart -->
+    <div class="col-left">
+
+      <!-- REGISTRO CARD -->
+      <div class="card card-registro">
+        <div class="card-head-row">
+          <div class="ch-left">
+            <div class="ch-icon-wrap"><i data-lucide="plus-circle" class="ch-ico"></i></div>
+            <span class="ch-title">Nuevo movimiento</span>
+          </div>
+          <div class="type-seg">
+            <button class="tseg-btn active" data-type="ingreso" id="tbtn-in">
+              <i data-lucide="arrow-down-left"></i>Ingreso
+            </button>
+            <button class="tseg-btn" data-type="gasto" id="tbtn-out">
+              <i data-lucide="arrow-up-right"></i>Egreso
+            </button>
+          </div>
+        </div>
+
+        <div class="reg-body">
+          <div class="field">
+            <label id="label-concepto">¿Qué ingresó?</label>
+            <div class="fi-wrap">
+              <i data-lucide="tag" class="fi-ico"></i>
+              <input type="text" id="mov-concepto" placeholder="Ej: Servicio de diseño"/>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field fg-grow">
+              <label>Nota <span class="opt">opcional</span></label>
+              <div class="fi-wrap">
+                <i data-lucide="pencil-line" class="fi-ico"></i>
+                <input type="text" id="mov-nota" placeholder="Detalle adicional"/>
+              </div>
+            </div>
+            <div class="field fg-date">
+              <label>Fecha</label>
+              <div class="fi-wrap">
+                <i data-lucide="calendar" class="fi-ico"></i>
+                <input type="date" id="mov-fecha"/>
+              </div>
+            </div>
+          </div>
+          <div class="amount-save-row">
+            <div class="field fg-amount">
+              <label>Valor</label>
+              <div class="fi-wrap fi-amount">
+                <span class="fi-prefix">$</span>
+                <input type="number" id="mov-valor" placeholder="0" min="0" step="100"/>
+              </div>
+            </div>
+            <button class="btn-save" id="btn-add-mov">
+              <i data-lucide="check"></i><span>Guardar</span>
+            </button>
+          </div>
+        </div>
       </div>
-      <div class="stat-grid">
-        <div class="stat-hero">
-          <div class="stat-hero-label">
-            <i data-lucide="sun-medium" class="stat-label-icon"></i>
-            Hoy
+
+      <!-- CHART CARD -->
+      <div class="card card-chart">
+        <div class="card-head-row">
+          <div class="ch-left">
+            <div class="ch-icon-wrap"><i data-lucide="bar-chart-3" class="ch-ico"></i></div>
+            <span class="ch-title">Últimos 7 días</span>
           </div>
-          <div class="stat-hero-value" id="stat-hoy">$0</div>
-          <div class="stat-hero-bar"><div class="stat-bar-fill green" id="bar-hoy"></div></div>
+          <div class="chart-legend">
+            <span class="cl-dot green"></span><span class="cl-label">Ingresos</span>
+            <span class="cl-dot red"></span><span class="cl-label">Egresos</span>
+          </div>
         </div>
-        <div class="stat-hero">
-          <div class="stat-hero-label">
-            <i data-lucide="calendar-days" class="stat-label-icon"></i>
-            Esta semana
-          </div>
-          <div class="stat-hero-value violet" id="stat-semana">$0</div>
-          <div class="stat-hero-bar"><div class="stat-bar-fill violet" id="bar-semana"></div></div>
-        </div>
-        <div class="stat-hero">
-          <div class="stat-hero-label">
-            <i data-lucide="calendar" class="stat-label-icon"></i>
-            Este mes
-          </div>
-          <div class="stat-hero-value blue" id="stat-mes">$0</div>
-          <div class="stat-hero-bar"><div class="stat-bar-fill blue" id="bar-mes"></div></div>
-        </div>
-        <div class="stat-card-mini">
-          <div class="mini-top">
-            <span class="mini-label">Gastos del mes</span>
-            <i data-lucide="trending-down" class="mini-icon red"></i>
-          </div>
-          <div class="mini-value red" id="stat-gastos">$0</div>
-        </div>
-        <div class="stat-card-mini balance-card">
-          <div class="mini-top">
-            <span class="mini-label">Balance neto</span>
-            <i data-lucide="activity" class="mini-icon amber"></i>
-          </div>
-          <div class="mini-value amber" id="stat-balance">$0</div>
+        <div class="chart-wrap">
+          <canvas id="chart-weekly"></canvas>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- CONTENT GRID -->
-  <div class="content-grid">
-
-    <!-- REGISTRO -->
-    <section class="card card-registro">
-      <div class="card-header">
-        <div class="card-title-wrap">
-          <div class="card-icon-wrap">
-            <i data-lucide="plus-circle" class="card-icon"></i>
+    <!-- RIGHT: historial -->
+    <div class="col-right">
+      <div class="card card-historial">
+        <div class="card-head-row">
+          <div class="ch-left">
+            <div class="ch-icon-wrap"><i data-lucide="list" class="ch-ico"></i></div>
+            <span class="ch-title">Movimientos</span>
           </div>
-          <h2 class="card-title">Nuevo movimiento</h2>
+          <div class="filter-seg">
+            <button class="fseg-btn active" data-filter="todos">Todos</button>
+            <button class="fseg-btn" data-filter="ingreso">Ingresos</button>
+            <button class="fseg-btn" data-filter="gasto">Egresos</button>
+          </div>
         </div>
-        <div class="type-toggle">
-          <button class="type-btn active" data-type="ingreso" id="tbtn-ingreso">
-            <i data-lucide="arrow-down-left"></i>
-            Entrada
-          </button>
-          <button class="type-btn" data-type="gasto" id="tbtn-gasto">
-            <i data-lucide="arrow-up-right"></i>
-            Salida
-          </button>
+        <div class="hist-scroll" id="mov-list">
+          <div class="empty-st">
+            <div class="empty-ico-wrap"><i data-lucide="inbox"></i></div>
+            <p class="empty-title">Sin movimientos aún</p>
+            <p class="empty-sub">Registra el primero en el panel de la izquierda</p>
+          </div>
         </div>
       </div>
-
-      <div class="registro-body">
-        <div class="field">
-          <label id="label-concepto">¿Qué vendiste?</label>
-          <div class="field-input-wrap">
-            <i data-lucide="tag" class="field-icon"></i>
-            <input type="text" id="mov-concepto" placeholder="Ej: Corte de cabello" />
-          </div>
-        </div>
-        <div class="fields-row">
-          <div class="field field-grow">
-            <label>Nota <span class="optional">opcional</span></label>
-            <div class="field-input-wrap">
-              <i data-lucide="pencil-line" class="field-icon"></i>
-              <input type="text" id="mov-nota" placeholder="Detalle adicional" />
-            </div>
-          </div>
-          <div class="field field-date">
-            <label>Fecha</label>
-            <div class="field-input-wrap">
-              <i data-lucide="calendar" class="field-icon"></i>
-              <input type="date" id="mov-fecha" />
-            </div>
-          </div>
-        </div>
-        <div class="amount-row">
-          <div class="field field-amount">
-            <label>Valor</label>
-            <div class="field-input-wrap amount-wrap">
-              <span class="amount-prefix">$</span>
-              <input type="number" id="mov-valor" placeholder="0" min="0" step="100" />
-            </div>
-          </div>
-          <button class="btn-save" id="btn-add-mov">
-            <i data-lucide="check" class="btn-icon"></i>
-            <span>Guardar</span>
-          </button>
-        </div>
-      </div>
-    </section>
-
-    <!-- HISTORIAL -->
-    <section class="card card-historial">
-      <div class="card-header">
-        <div class="card-title-wrap">
-          <div class="card-icon-wrap">
-            <i data-lucide="list" class="card-icon"></i>
-          </div>
-          <h2 class="card-title">Movimientos</h2>
-        </div>
-        <div class="filter-pills">
-          <button class="filter-pill active" data-filter="todos">Todos</button>
-          <button class="filter-pill" data-filter="ingreso">Entradas</button>
-          <button class="filter-pill" data-filter="gasto">Salidas</button>
-        </div>
-      </div>
-
-      <div id="mov-list" class="mov-list">
-        <div class="empty-state">
-          <div class="empty-icon-wrap">
-            <i data-lucide="inbox"></i>
-          </div>
-          <p class="empty-title">Todo listo para empezar</p>
-          <p class="empty-sub">Tu primer movimiento aparecerá aquí</p>
-        </div>
-      </div>
-    </section>
+    </div>
 
   </div>
 
   <footer class="app-footer">
     <span>por <strong>Uqbar</strong></span>
-    <span class="footer-dot">·</span>
-    <a href="https://www.uqbar.app" target="_blank">uqbar.app</a>
+    <span class="dot">·</span>
+    <a href="https://uqbar.app" target="_blank">uqbar.app</a>
   </footer>
-
 </div>
 
 <!-- TOAST -->
 <div id="toast" class="toast hidden">
-  <i data-lucide="check-circle" class="toast-icon"></i>
+  <i data-lucide="check-circle" class="t-ico"></i>
   <span id="toast-msg"></span>
 </div>
 
