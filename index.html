@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Uqbar · Finanzas para tu negocio</title>
+  <link rel="stylesheet" href="style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+  <!-- ══════════════════════════════════════════
+       PANTALLA: LOGIN
+  ══════════════════════════════════════════ -->
+  <div id="screen-login" class="screen active">
+    <div class="login-bg">
+      <div class="login-glow"></div>
+    </div>
+    <div class="login-card">
+      <div class="login-brand">
+        <img src="logouq.png" alt="Uqbar" class="login-logo" />
+        <div class="login-brand-text">
+          <span class="brand-name">Uqbar</span>
+          <span class="brand-tagline">Finanzas simples para tu negocio</span>
+        </div>
+      </div>
+
+      <div id="login-form-wrap">
+        <h2 class="login-title">Bienvenido de vuelta</h2>
+        <p class="login-sub">Ingresa a tu espacio financiero</p>
+        <div class="form-group">
+          <label>Correo electrónico</label>
+          <input type="email" id="login-email" placeholder="tu@negocio.com" autocomplete="email" />
+        </div>
+        <div class="form-group">
+          <label>Contraseña</label>
+          <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password" />
+        </div>
+        <div id="login-error" class="form-error hidden"></div>
+        <button class="btn-primary btn-full" id="btn-login">Entrar</button>
+        <p class="login-switch">¿Primera vez? <a href="#" id="link-to-register">Crea tu cuenta</a></p>
+      </div>
+
+      <div id="register-form-wrap" class="hidden">
+        <h2 class="login-title">Crea tu cuenta</h2>
+        <p class="login-sub">Empieza gratis en 30 segundos</p>
+        <div class="form-group">
+          <label>Nombre de tu negocio</label>
+          <input type="text" id="reg-business" placeholder="Ej: Panadería Luna" />
+        </div>
+        <div class="form-group">
+          <label>Correo electrónico</label>
+          <input type="email" id="reg-email" placeholder="tu@negocio.com" />
+        </div>
+        <div class="form-group">
+          <label>Contraseña</label>
+          <input type="password" id="reg-password" placeholder="Mínimo 6 caracteres" />
+        </div>
+        <div id="reg-error" class="form-error hidden"></div>
+        <button class="btn-primary btn-full" id="btn-register">Crear cuenta</button>
+        <p class="login-switch">¿Ya tienes cuenta? <a href="#" id="link-to-login">Inicia sesión</a></p>
+      </div>
+
+      <div class="login-footer">
+        <span>por <strong>Uqbar</strong></span>
+        <a href="https://www.uqbar.app" target="_blank">uqbar.app</a>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════
+       PANTALLA: DASHBOARD
+  ══════════════════════════════════════════ -->
+  <div id="screen-dashboard" class="screen hidden">
+
+    <!-- TOPBAR -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <img src="logouq.png" alt="Uqbar" class="topbar-logo" />
+        <div class="topbar-brand">
+          <span class="topbar-app">Uqbar</span>
+          <span class="topbar-separator">·</span>
+          <span class="topbar-biz" id="topbar-biz-name">Mi Negocio</span>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <div class="topbar-date" id="topbar-date"></div>
+        <button class="btn-ghost btn-sm" id="btn-logout">Salir</button>
+      </div>
+    </header>
+
+    <!-- STATS STRIP -->
+    <div class="stats-strip">
+      <div class="stat-card stat-income">
+        <span class="stat-value" id="stat-hoy">$0</span>
+        <span class="stat-label">Hoy</span>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat-card stat-week">
+        <span class="stat-value" id="stat-semana">$0</span>
+        <span class="stat-label">Esta semana</span>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat-card stat-month">
+        <span class="stat-value" id="stat-mes">$0</span>
+        <span class="stat-label">Este mes</span>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat-card stat-expenses">
+        <span class="stat-value" id="stat-gastos">$0</span>
+        <span class="stat-label">Gastos del mes</span>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat-card stat-balance">
+        <span class="stat-value" id="stat-balance">$0</span>
+        <span class="stat-label">Balance neto</span>
+      </div>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <main class="main-content">
+
+      <!-- REGISTRO RÁPIDO -->
+      <section class="panel panel-registro">
+        <div class="panel-header">
+          <h2 class="panel-title">Registrar movimiento</h2>
+          <!-- Tabs -->
+          <div class="tabs">
+            <button class="tab active" data-type="ingreso">+ Ingreso</button>
+            <button class="tab" data-type="gasto">− Gasto</button>
+          </div>
+        </div>
+
+        <div class="registro-form">
+          <div class="form-row">
+            <div class="form-group fg-grow">
+              <label id="label-concepto">Producto / servicio</label>
+              <input type="text" id="mov-concepto" placeholder="Ej: Corte de cabello" />
+            </div>
+            <div class="form-group fg-amount">
+              <label>Valor</label>
+              <input type="number" id="mov-valor" placeholder="0" min="0" step="100" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group fg-grow">
+              <label>Nota (opcional)</label>
+              <input type="text" id="mov-nota" placeholder="Detalle adicional" />
+            </div>
+            <div class="form-group fg-date">
+              <label>Fecha</label>
+              <input type="date" id="mov-fecha" />
+            </div>
+          </div>
+          <button class="btn-primary" id="btn-add-mov">Guardar</button>
+        </div>
+      </section>
+
+      <!-- HISTORIAL -->
+      <section class="panel panel-historial">
+        <div class="panel-header">
+          <h2 class="panel-title">Movimientos recientes</h2>
+          <div class="filter-tabs">
+            <button class="filter-tab active" data-filter="todos">Todos</button>
+            <button class="filter-tab" data-filter="ingreso">Ingresos</button>
+            <button class="filter-tab" data-filter="gasto">Gastos</button>
+          </div>
+        </div>
+        <div id="mov-list" class="mov-list">
+          <div class="empty-state">
+            <span class="empty-icon">💳</span>
+            <p>Aún no hay movimientos.<br/>Registra tu primer ingreso o gasto.</p>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="app-footer">
+      <span>por <strong>Uqbar</strong> &nbsp;·&nbsp; <a href="https://www.uqbar.app" target="_blank">uqbar.app</a></span>
+    </footer>
+
+  </div>
+
+  <!-- TOAST -->
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="script.js"></script>
+</body>
+</html>
