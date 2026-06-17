@@ -1,7 +1,7 @@
-/* ══════════════════════════════════════════
-   UQBAR · FINANZAS — script.js
-   Supabase Auth + Movimientos por cliente
-══════════════════════════════════════════ */
+/* ════════════════════════════════════════
+   UQBAR · script.js — v1.1
+   Supabase Auth + Movimientos + Theme
+════════════════════════════════════════ */
 
 // ── CONFIG Supabase ──
 const SUPABASE_URL = 'https://ufpnpzbhcbgxiptbcmwe.supabase.co';
@@ -11,51 +11,71 @@ const { createClient } = supabase;
 const db = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ── STATE ──
-let currentUser = null;
+let currentUser    = null;
 let currentProfile = null;
-let allMovimientos = [];
-let activeType = 'ingreso';
-let activeFilter = 'todos';
+let allMovs        = [];
+let activeType     = 'ingreso';
+let activeFilter   = 'todos';
 
-// ══════════════════════════════════════════
-// INIT
-// ══════════════════════════════════════════
+// ════════════════════════════════════════
+// BOOT
+// ════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', async () => {
+  lucide.createIcons();   // render all lucide icons
+  initTheme();
   setDate();
-  bindLoginUI();
-  bindDashboardUI();
+  bindLogin();
+  bindDashboard();
 
-  // Verificar sesión activa
   const { data: { session } } = await db.auth.getSession();
-  if (session?.user) {
-    await handleAuth(session.user);
-  }
+  if (session?.user) await bootDashboard(session.user);
 
-  // Escuchar cambios de auth
   db.auth.onAuthStateChange(async (event, session) => {
-    if (event === 'SIGNED_IN' && session?.user) {
-      await handleAuth(session.user);
-    } else if (event === 'SIGNED_OUT') {
-      showLogin();
-    }
+    if (event === 'SIGNED_IN' && session?.user) await bootDashboard(session.user);
+    else if (event === 'SIGNED_OUT') showLogin();
   });
 });
 
-// ── FECHA ──
-function setDate() {
-  const el = document.getElementById('topbar-date');
-  if (!el) return;
-  const now = new Date();
-  el.textContent = now.toLocaleDateString('es-CO', {
-    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
-  });
+// ════════════════════════════════════════
+// THEME
+// ════════════════════════════════════════
+function initTheme() {
+  const saved = localStorage.getItem('uq-theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', saved);
 }
 
-// ══════════════════════════════════════════
+document.getElementById('btn-theme')?.addEventListener('click', () => {
+  const current = document.documentElement.getAttribute('data-theme');
+  const next    = current === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('uq-theme', next);
+  lucide.createIcons();
+});
+
+// ════════════════════════════════════════
+// DATE / GREETING
+// ════════════════════════════════════════
+function setDate() {
+  const now  = new Date();
+  const hour = now.getHours();
+
+  const greeting = hour < 12 ? 'Buenos días' : hour < 19 ? 'Buenas tardes' : 'Buenas noches';
+  const greetEl  = document.getElementById('hero-greeting-text');
+  if (greetEl) greetEl.textContent = greeting;
+
+  const dateEl = document.getElementById('topbar-date');
+  if (dateEl) {
+    dateEl.textContent = now.toLocaleDateString('es-CO', {
+      weekday: 'short', day: 'numeric', month: 'short'
+    });
+  }
+}
+
+// ════════════════════════════════════════
 // AUTH
-// ══════════════════════════════════════════
-function bindLoginUI() {
-  // Cambio de pantallas
+// ════════════════════════════════════════
+function bindLogin() {
+  // Toggle forms
   document.getElementById('link-to-register').addEventListener('click', e => {
     e.preventDefault();
     document.getElementById('login-form-wrap').classList.add('hidden');
@@ -67,30 +87,30 @@ function bindLoginUI() {
     document.getElementById('login-form-wrap').classList.remove('hidden');
   });
 
-  // Login
-  document.getElementById('btn-login').addEventListener('click', handleLogin);
-  document.getElementById('login-password').addEventListener('keydown', e => {
-    if (e.key === 'Enter') handleLogin();
+  // Show/hide password
+  document.getElementById('btn-eye-login')?.addEventListener('click', () => {
+    const inp = document.getElementById('login-password');
+    inp.type = inp.type === 'password' ? 'text' : 'password';
   });
 
-  // Registro
-  document.getElementById('btn-register').addEventListener('click', handleRegister);
+  document.getElementById('btn-login').addEventListener('click', doLogin);
+  document.getElementById('login-password').addEventListener('keydown', e => {
+    if (e.key === 'Enter') doLogin();
+  });
+  document.getElementById('btn-register').addEventListener('click', doRegister);
 }
 
-async function handleLogin() {
-  const email = document.getElementById('login-email').value.trim();
+async function doLogin() {
+  const email    = document.getElementById('login-email').value.trim();
   const password = document.getElementById('login-password').value;
-  const errEl = document.getElementById('login-error');
-
-  if (!email || !password) return showErr(errEl, 'Completa todos los campos.');
+  const errEl    = document.getElementById('login-error');
+  if (!email || !password) return showErr(errEl, 'Completa los dos campos.');
 
   const btn = document.getElementById('btn-login');
-  btn.textContent = 'Ingresando…';
-  btn.disabled = true;
+  setLoading(btn, true, 'Entrando…');
 
   const { error } = await db.auth.signInWithPassword({ email, password });
-  btn.textContent = 'Entrar';
-  btn.disabled = false;
+  setLoading(btn, false, '<span>Entrar</span>');
 
   if (error) {
     const msg = error.message.includes('Invalid') ? 'Correo o contraseña incorrectos.' : error.message;
@@ -98,148 +118,138 @@ async function handleLogin() {
   }
 }
 
-async function handleRegister() {
-  const biz     = document.getElementById('reg-business').value.trim();
-  const email   = document.getElementById('reg-email').value.trim();
+async function doRegister() {
+  const biz      = document.getElementById('reg-business').value.trim();
+  const email    = document.getElementById('reg-email').value.trim();
   const password = document.getElementById('reg-password').value;
-  const errEl   = document.getElementById('reg-error');
+  const errEl    = document.getElementById('reg-error');
 
   if (!biz || !email || !password) return showErr(errEl, 'Completa todos los campos.');
   if (password.length < 6) return showErr(errEl, 'La contraseña debe tener al menos 6 caracteres.');
 
   const btn = document.getElementById('btn-register');
-  btn.textContent = 'Creando…';
-  btn.disabled = true;
+  setLoading(btn, true, 'Creando tu espacio…');
 
   const { data, error } = await db.auth.signUp({ email, password });
-  btn.textContent = 'Crear cuenta';
-  btn.disabled = false;
+  setLoading(btn, false, '<span>Crear mi espacio</span>');
 
   if (error) return showErr(errEl, error.message);
 
-  // Crear perfil del negocio
   if (data?.user) {
     await db.from('perfiles').insert({
       user_id: data.user.id,
       nombre_negocio: biz,
       email
     });
-    showToast('¡Cuenta creada! Bienvenido a Uqbar.', 'success');
+    toast('¡Todo listo! Bienvenido a Uqbar', 'success');
   }
 }
 
-async function handleAuth(user) {
-  currentUser = user;
-
-  // Cargar perfil
-  const { data: perfil } = await db.from('perfiles')
-    .select('*')
-    .eq('user_id', user.id)
-    .single();
-
-  currentProfile = perfil;
-
-  if (perfil?.nombre_negocio) {
-    document.getElementById('topbar-biz-name').textContent = perfil.nombre_negocio;
-  }
-
-  // Setear fecha por defecto en el formulario
-  document.getElementById('mov-fecha').value = new Date().toISOString().split('T')[0];
-
-  await loadMovimientos();
-  showDashboard();
-}
-
-async function logout() {
+async function doLogout() {
   await db.auth.signOut();
-  allMovimientos = [];
+  allMovs = [];
   showLogin();
 }
 
-// ══════════════════════════════════════════
+// ════════════════════════════════════════
 // SCREENS
-// ══════════════════════════════════════════
+// ════════════════════════════════════════
 function showLogin() {
   document.getElementById('screen-login').classList.add('active');
   document.getElementById('screen-login').classList.remove('hidden');
   document.getElementById('screen-dashboard').classList.add('hidden');
   document.getElementById('screen-dashboard').classList.remove('active');
 }
-
-function showDashboard() {
+function showDash() {
   document.getElementById('screen-login').classList.remove('active');
   document.getElementById('screen-login').classList.add('hidden');
-  document.getElementById('screen-dashboard').classList.add('active');
   document.getElementById('screen-dashboard').classList.remove('hidden');
+  document.getElementById('screen-dashboard').classList.add('active');
 }
 
-// ══════════════════════════════════════════
+// ════════════════════════════════════════
+// BOOT DASHBOARD
+// ════════════════════════════════════════
+async function bootDashboard(user) {
+  currentUser = user;
+
+  const { data: perfil } = await db.from('perfiles')
+    .select('*').eq('user_id', user.id).single();
+
+  currentProfile = perfil;
+
+  const bizName = perfil?.nombre_negocio || 'Mi negocio';
+  document.getElementById('topbar-biz-name').textContent = bizName;
+  document.getElementById('hero-biz-display').textContent = bizName;
+
+  // Default date = today
+  document.getElementById('mov-fecha').value = todayStr();
+
+  await loadMovs();
+  showDash();
+  lucide.createIcons();
+}
+
+// ════════════════════════════════════════
 // DASHBOARD UI
-// ══════════════════════════════════════════
-function bindDashboardUI() {
-  // Logout
-  document.getElementById('btn-logout').addEventListener('click', logout);
+// ════════════════════════════════════════
+function bindDashboard() {
+  document.getElementById('btn-logout').addEventListener('click', doLogout);
 
-  // Tabs de tipo (ingreso / gasto)
-  document.querySelectorAll('.tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-      activeType = tab.dataset.type;
-      document.getElementById('label-concepto').textContent =
-        activeType === 'ingreso' ? 'Producto / servicio' : 'Concepto del gasto';
-      document.getElementById('mov-concepto').placeholder =
-        activeType === 'ingreso' ? 'Ej: Corte de cabello' : 'Ej: Proveedor telas';
+  // Type tabs
+  document.querySelectorAll('.type-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeType = btn.dataset.type;
+      const isIngreso = activeType === 'ingreso';
+      document.getElementById('label-concepto').textContent = isIngreso ? '¿Qué vendiste?' : '¿En qué gastaste?';
+      document.getElementById('mov-concepto').placeholder   = isIngreso ? 'Ej: Corte de cabello' : 'Ej: Proveedor telas';
     });
   });
 
-  // Filtros de historial
-  document.querySelectorAll('.filter-tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-      activeFilter = tab.dataset.filter;
-      renderMovimientos();
+  // Filter pills
+  document.querySelectorAll('.filter-pill').forEach(pill => {
+    pill.addEventListener('click', () => {
+      document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+      pill.classList.add('active');
+      activeFilter = pill.dataset.filter;
+      renderMovs();
     });
   });
 
-  // Guardar movimiento
-  document.getElementById('btn-add-mov').addEventListener('click', addMovimiento);
+  document.getElementById('btn-add-mov').addEventListener('click', addMov);
 }
 
-// ══════════════════════════════════════════
-// MOVIMIENTOS — CRUD
-// ══════════════════════════════════════════
-async function loadMovimientos() {
+// ════════════════════════════════════════
+// MOVIMIENTOS
+// ════════════════════════════════════════
+async function loadMovs() {
   if (!currentUser) return;
-
-  const { data, error } = await db
+  const { data } = await db
     .from('movimientos')
     .select('*')
     .eq('user_id', currentUser.id)
     .order('fecha', { ascending: false })
     .order('created_at', { ascending: false });
 
-  if (error) { console.error(error); return; }
-
-  allMovimientos = data || [];
+  allMovs = data || [];
   calcStats();
-  renderMovimientos();
+  renderMovs();
 }
 
-async function addMovimiento() {
+async function addMov() {
   const concepto = document.getElementById('mov-concepto').value.trim();
   const valor    = parseFloat(document.getElementById('mov-valor').value);
   const nota     = document.getElementById('mov-nota').value.trim();
   const fecha    = document.getElementById('mov-fecha').value;
 
-  if (!concepto) return showToast('Escribe un concepto.', 'error');
-  if (!valor || valor <= 0) return showToast('Ingresa un valor válido.', 'error');
-  if (!fecha) return showToast('Selecciona una fecha.', 'error');
+  if (!concepto)         return toast('Escribe un concepto.', 'error');
+  if (!valor || valor <= 0) return toast('Ingresa un valor mayor a cero.', 'error');
+  if (!fecha)            return toast('Selecciona una fecha.', 'error');
 
   const btn = document.getElementById('btn-add-mov');
-  btn.textContent = 'Guardando…';
-  btn.disabled = true;
+  setLoading(btn, true, 'Guardando…');
 
   const { data, error } = await db.from('movimientos').insert({
     user_id: currentUser.id,
@@ -250,75 +260,134 @@ async function addMovimiento() {
     fecha
   }).select().single();
 
-  btn.textContent = 'Guardar';
-  btn.disabled = false;
+  setLoading(btn, false, '');
+  if (error) return toast('No se pudo guardar. Intenta de nuevo.', 'error');
 
-  if (error) return showToast('Error al guardar. Intenta de nuevo.', 'error');
-
-  // Limpiar form
+  // Reset form fields (keep date and type)
   document.getElementById('mov-concepto').value = '';
-  document.getElementById('mov-valor').value = '';
-  document.getElementById('mov-nota').value = '';
+  document.getElementById('mov-valor').value    = '';
+  document.getElementById('mov-nota').value     = '';
 
-  allMovimientos.unshift(data);
+  allMovs.unshift(data);
   calcStats();
-  renderMovimientos();
+  renderMovs();
 
-  const emoji = activeType === 'ingreso' ? '✅' : '🔴';
-  showToast(`${emoji} ${activeType === 'ingreso' ? 'Ingreso' : 'Gasto'} registrado`, 'success');
+  const label = activeType === 'ingreso' ? 'Entrada registrada' : 'Gasto registrado';
+  toast(label, 'success');
+  lucide.createIcons();
 }
 
-async function deleteMovimiento(id) {
-  const { error } = await db.from('movimientos').delete().eq('id', id).eq('user_id', currentUser.id);
-  if (error) return showToast('Error al eliminar.', 'error');
+async function deleteMov(id) {
+  const { error } = await db.from('movimientos').delete()
+    .eq('id', id).eq('user_id', currentUser.id);
+  if (error) return toast('No se pudo eliminar.', 'error');
 
-  allMovimientos = allMovimientos.filter(m => m.id !== id);
+  allMovs = allMovs.filter(m => m.id !== id);
   calcStats();
-  renderMovimientos();
-  showToast('Movimiento eliminado', '');
+  renderMovs();
+  lucide.createIcons();
 }
 
-// ══════════════════════════════════════════
+// ════════════════════════════════════════
 // STATS
-// ══════════════════════════════════════════
+// ════════════════════════════════════════
 function calcStats() {
-  const now     = new Date();
-  const todayStr  = now.toISOString().split('T')[0];
+  const today = todayStr();
+  const lunes = weekStartStr();
+  const mesI  = monthStartStr();
 
-  // Inicio de semana (lunes)
-  const day     = now.getDay();
-  const diffLun = (day === 0 ? -6 : 1 - day);
-  const lunes   = new Date(now);
-  lunes.setDate(now.getDate() + diffLun);
-  const lunesStr = lunes.toISOString().split('T')[0];
+  let hoy = 0, semana = 0, mes = 0, gastos = 0;
 
-  // Inicio de mes
-  const mesStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
-
-  let hoy = 0, semana = 0, mes = 0, gastosMes = 0;
-
-  allMovimientos.forEach(m => {
-    const f = m.fecha;
+  allMovs.forEach(m => {
     const v = Number(m.valor);
     if (m.tipo === 'ingreso') {
-      if (f === todayStr) hoy += v;
-      if (f >= lunesStr)  semana += v;
-      if (f >= mesStr)    mes += v;
+      if (m.fecha === today) hoy    += v;
+      if (m.fecha >= lunes)  semana += v;
+      if (m.fecha >= mesI)   mes    += v;
     } else {
-      if (f >= mesStr) gastosMes += v;
+      if (m.fecha >= mesI) gastos += v;
     }
   });
 
-  const balance = mes - gastosMes;
+  const balance = mes - gastos;
+  const maxVal  = Math.max(hoy, semana, mes, 1);
 
-  document.getElementById('stat-hoy').textContent    = fmt(hoy);
-  document.getElementById('stat-semana').textContent = fmt(semana);
-  document.getElementById('stat-mes').textContent    = fmt(mes);
-  document.getElementById('stat-gastos').textContent = fmt(gastosMes);
+  setText('stat-hoy',     fmt(hoy));
+  setText('stat-semana',  fmt(semana));
+  setText('stat-mes',     fmt(mes));
+  setText('stat-gastos',  fmt(gastos));
 
   const balEl = document.getElementById('stat-balance');
-  balEl.textContent = fmt(balance);
-  balEl.style.color = balance >= 0 ? 'var(--amber)' : 'var(--red)';
+  if (balEl) {
+    balEl.textContent = fmt(balance);
+    balEl.className   = 'mini-value ' + (balance >= 0 ? 'amber' : 'red');
+  }
+
+  // Progress bars (relative to max ingreso)
+  setBar('bar-hoy',    hoy / maxVal * 100);
+  setBar('bar-semana', semana / maxVal * 100);
+  setBar('bar-mes',    mes / maxVal * 100);
+}
+
+// ════════════════════════════════════════
+// RENDER
+// ════════════════════════════════════════
+function renderMovs() {
+  const list = document.getElementById('mov-list');
+  const data = activeFilter === 'todos'
+    ? allMovs
+    : allMovs.filter(m => m.tipo === activeFilter);
+
+  if (data.length === 0) {
+    const labels = { todos: 'movimientos', ingreso: 'entradas', gasto: 'salidas' };
+    list.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon-wrap"><i data-lucide="inbox"></i></div>
+        <p class="empty-title">Sin ${labels[activeFilter]} aún</p>
+        <p class="empty-sub">${activeFilter === 'todos' ? 'Registra tu primer movimiento' : 'Cambia el filtro o agrega uno nuevo'}</p>
+      </div>`;
+    lucide.createIcons();
+    return;
+  }
+
+  list.innerHTML = data.map(m => {
+    const fecha  = new Date(m.fecha + 'T12:00:00').toLocaleDateString('es-CO', { day: 'numeric', month: 'short' });
+    const signo  = m.tipo === 'ingreso' ? '+' : '−';
+    const icon   = m.tipo === 'ingreso' ? 'arrow-down-left' : 'arrow-up-right';
+    return `
+    <div class="mov-item">
+      <div class="mov-pill ${m.tipo}"><i data-lucide="${icon}"></i></div>
+      <div class="mov-info">
+        <div class="mov-concepto">${esc(m.concepto)}</div>
+        <div class="mov-meta">${fecha}${m.nota ? ' · ' + esc(m.nota) : ''}</div>
+      </div>
+      <div class="mov-amount ${m.tipo}">${signo} ${fmt(m.valor)}</div>
+      <button class="mov-del" onclick="deleteMov('${m.id}')" title="Eliminar">
+        <i data-lucide="x"></i>
+      </button>
+    </div>`;
+  }).join('');
+
+  lucide.createIcons();
+}
+
+// ════════════════════════════════════════
+// HELPERS
+// ════════════════════════════════════════
+function todayStr() {
+  return new Date().toISOString().split('T')[0];
+}
+function weekStartStr() {
+  const now = new Date();
+  const day = now.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  const mon = new Date(now);
+  mon.setDate(now.getDate() + diff);
+  return mon.toISOString().split('T')[0];
+}
+function monthStartStr() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`;
 }
 
 function fmt(n) {
@@ -328,64 +397,52 @@ function fmt(n) {
   }).format(n);
 }
 
-// ══════════════════════════════════════════
-// RENDER MOVIMIENTOS
-// ══════════════════════════════════════════
-function renderMovimientos() {
-  const list = document.getElementById('mov-list');
-  const filtered = activeFilter === 'todos'
-    ? allMovimientos
-    : allMovimientos.filter(m => m.tipo === activeFilter);
-
-  if (filtered.length === 0) {
-    list.innerHTML = `
-      <div class="empty-state">
-        <span class="empty-icon">${activeFilter === 'ingreso' ? '💚' : activeFilter === 'gasto' ? '🔴' : '💳'}</span>
-        <p>No hay ${activeFilter === 'todos' ? 'movimientos' : activeFilter + 's'} aún.<br/>Registra el primero arriba.</p>
-      </div>`;
-    return;
-  }
-
-  list.innerHTML = filtered.map(m => {
-    const fecha = new Date(m.fecha + 'T12:00:00').toLocaleDateString('es-CO', {
-      day: 'numeric', month: 'short', year: 'numeric'
-    });
-    const signo = m.tipo === 'ingreso' ? '+' : '−';
-    const icon  = m.tipo === 'ingreso' ? '↑' : '↓';
-    return `
-      <div class="mov-item">
-        <div class="mov-pill ${m.tipo}">${icon}</div>
-        <div class="mov-info">
-          <div class="mov-concepto">${esc(m.concepto)}</div>
-          <div class="mov-meta">${fecha}${m.nota ? ' · ' + esc(m.nota) : ''}</div>
-        </div>
-        <div class="mov-valor ${m.tipo}">${signo} ${fmt(m.valor)}</div>
-        <button class="mov-delete" onclick="deleteMovimiento('${m.id}')" title="Eliminar">×</button>
-      </div>`;
-  }).join('');
+function setText(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = val;
 }
 
-// ══════════════════════════════════════════
-// HELPERS
-// ══════════════════════════════════════════
+function setBar(id, pct) {
+  const el = document.getElementById(id);
+  if (el) el.style.width = Math.min(100, pct) + '%';
+}
+
 function showErr(el, msg) {
   el.textContent = msg;
   el.classList.remove('hidden');
   setTimeout(() => el.classList.add('hidden'), 4000);
 }
 
-function showToast(msg, type = '') {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.className = `toast ${type}`;
+let toastTimer;
+function toast(msg, type = '') {
+  const t   = document.getElementById('toast');
+  const txt = document.getElementById('toast-msg');
+  txt.textContent = msg;
+  t.className = `toast ${type} show`;
+
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    t.classList.remove('show');
+    setTimeout(() => t.classList.add('hidden'), 300);
+  }, 2800);
   t.classList.remove('hidden');
-  setTimeout(() => t.classList.add('hidden'), 2800);
+
+  // Update toast icon
+  const icon = t.querySelector('.toast-icon');
+  if (icon) {
+    icon.setAttribute('data-lucide', type === 'error' ? 'alert-circle' : 'check-circle');
+    lucide.createIcons();
+  }
+}
+
+function setLoading(btn, loading, html) {
+  btn.disabled = loading;
+  if (!loading && html) btn.innerHTML = html;
+  else if (loading) btn.textContent = html;
 }
 
 function esc(str) {
   return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }

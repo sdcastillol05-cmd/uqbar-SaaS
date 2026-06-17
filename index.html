@@ -1,193 +1,307 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-theme="dark">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Uqbar · Finanzas para tu negocio</title>
+  <title>Uqbar</title>
   <link rel="stylesheet" href="style.css" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;1,14..32,400&family=Syne:wght@600;700;800&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
 
-  <!-- ══════════════════════════════════════════
-       PANTALLA: LOGIN
-  ══════════════════════════════════════════ -->
-  <div id="screen-login" class="screen active">
-    <div class="login-bg">
-      <div class="login-glow"></div>
-    </div>
-    <div class="login-card">
-      <div class="login-brand">
-        <img src="logouq.png" alt="Uqbar" class="login-logo" />
-        <div class="login-brand-text">
-          <span class="brand-name">Uqbar</span>
-          <span class="brand-tagline">Finanzas simples para tu negocio</span>
-        </div>
-      </div>
+<!-- ════════════════════════════════════════
+     SCREEN: LOGIN
+════════════════════════════════════════ -->
+<div id="screen-login" class="screen active">
 
-      <div id="login-form-wrap">
-        <h2 class="login-title">Bienvenido de vuelta</h2>
-        <p class="login-sub">Ingresa a tu espacio financiero</p>
-        <div class="form-group">
-          <label>Correo electrónico</label>
-          <input type="email" id="login-email" placeholder="tu@negocio.com" autocomplete="email" />
+  <!-- Ambient background -->
+  <div class="login-ambient">
+    <div class="ambient-orb orb-1"></div>
+    <div class="ambient-orb orb-2"></div>
+    <div class="ambient-orb orb-3"></div>
+    <div class="ambient-grid"></div>
+  </div>
+
+  <div class="login-shell">
+
+    <!-- Brand pill -->
+    <div class="login-brand-pill">
+      <img src="logouq.png" alt="Uqbar" class="brand-pill-logo" />
+      <span class="brand-pill-name">Uqbar</span>
+    </div>
+
+    <div class="login-card" id="login-card">
+
+      <!-- LOGIN -->
+      <div id="login-form-wrap" class="form-wrap">
+        <div class="form-header">
+          <h1 class="form-title">Buen día.</h1>
+          <p class="form-sub">Entra a tu espacio de trabajo</p>
         </div>
-        <div class="form-group">
-          <label>Contraseña</label>
-          <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password" />
+        <div class="field-group">
+          <div class="field">
+            <label>Correo</label>
+            <div class="field-input-wrap">
+              <i data-lucide="mail" class="field-icon"></i>
+              <input type="email" id="login-email" placeholder="tu@correo.com" autocomplete="email" />
+            </div>
+          </div>
+          <div class="field">
+            <label>Contraseña</label>
+            <div class="field-input-wrap">
+              <i data-lucide="lock" class="field-icon"></i>
+              <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password" />
+              <button class="field-eye" id="btn-eye-login" type="button" tabindex="-1">
+                <i data-lucide="eye" class="eye-icon"></i>
+              </button>
+            </div>
+          </div>
         </div>
         <div id="login-error" class="form-error hidden"></div>
-        <button class="btn-primary btn-full" id="btn-login">Entrar</button>
-        <p class="login-switch">¿Primera vez? <a href="#" id="link-to-register">Crea tu cuenta</a></p>
+        <button class="btn-cta" id="btn-login">
+          <span>Entrar</span>
+          <i data-lucide="arrow-right" class="btn-icon"></i>
+        </button>
+        <p class="form-switch">¿Primera vez? <a href="#" id="link-to-register">Crea tu espacio</a></p>
       </div>
 
-      <div id="register-form-wrap" class="hidden">
-        <h2 class="login-title">Crea tu cuenta</h2>
-        <p class="login-sub">Empieza gratis en 30 segundos</p>
-        <div class="form-group">
-          <label>Nombre de tu negocio</label>
-          <input type="text" id="reg-business" placeholder="Ej: Panadería Luna" />
+      <!-- REGISTER -->
+      <div id="register-form-wrap" class="form-wrap hidden">
+        <div class="form-header">
+          <h1 class="form-title">Empieza hoy.</h1>
+          <p class="form-sub">Listo en menos de un minuto</p>
         </div>
-        <div class="form-group">
-          <label>Correo electrónico</label>
-          <input type="email" id="reg-email" placeholder="tu@negocio.com" />
-        </div>
-        <div class="form-group">
-          <label>Contraseña</label>
-          <input type="password" id="reg-password" placeholder="Mínimo 6 caracteres" />
+        <div class="field-group">
+          <div class="field">
+            <label>Tu negocio</label>
+            <div class="field-input-wrap">
+              <i data-lucide="briefcase" class="field-icon"></i>
+              <input type="text" id="reg-business" placeholder="Ej: Panadería Luna" />
+            </div>
+          </div>
+          <div class="field">
+            <label>Correo</label>
+            <div class="field-input-wrap">
+              <i data-lucide="mail" class="field-icon"></i>
+              <input type="email" id="reg-email" placeholder="tu@correo.com" />
+            </div>
+          </div>
+          <div class="field">
+            <label>Contraseña</label>
+            <div class="field-input-wrap">
+              <i data-lucide="lock" class="field-icon"></i>
+              <input type="password" id="reg-password" placeholder="Mínimo 6 caracteres" />
+            </div>
+          </div>
         </div>
         <div id="reg-error" class="form-error hidden"></div>
-        <button class="btn-primary btn-full" id="btn-register">Crear cuenta</button>
-        <p class="login-switch">¿Ya tienes cuenta? <a href="#" id="link-to-login">Inicia sesión</a></p>
+        <button class="btn-cta" id="btn-register">
+          <span>Crear mi espacio</span>
+          <i data-lucide="sparkles" class="btn-icon"></i>
+        </button>
+        <p class="form-switch">¿Ya tienes cuenta? <a href="#" id="link-to-login">Inicia sesión</a></p>
       </div>
 
-      <div class="login-footer">
-        <span>por <strong>Uqbar</strong></span>
-        <a href="https://www.uqbar.app" target="_blank">uqbar.app</a>
+    </div>
+
+    <p class="login-footer-text">por <strong>Uqbar</strong> · <a href="https://www.uqbar.app" target="_blank">uqbar.app</a></p>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════
+     SCREEN: DASHBOARD
+════════════════════════════════════════ -->
+<div id="screen-dashboard" class="screen hidden">
+
+  <!-- NAV -->
+  <nav class="navbar">
+    <div class="nav-left">
+      <div class="nav-logo-wrap">
+        <img src="logouq.png" alt="Uqbar" class="nav-logo" />
+        <span class="nav-brand">Uqbar</span>
+      </div>
+      <div class="nav-sep"></div>
+      <span class="nav-biz" id="topbar-biz-name">Mi negocio</span>
+    </div>
+    <div class="nav-right">
+      <div class="nav-date" id="topbar-date"></div>
+      <!-- Theme toggle -->
+      <button class="btn-theme" id="btn-theme" title="Cambiar tema">
+        <i data-lucide="sun" class="theme-icon-light"></i>
+        <i data-lucide="moon" class="theme-icon-dark"></i>
+      </button>
+      <button class="btn-ghost-nav" id="btn-logout">
+        <i data-lucide="log-out"></i>
+        <span>Salir</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- HERO STATS -->
+  <div class="hero-stats">
+    <div class="hero-ambient">
+      <div class="hero-orb"></div>
+    </div>
+    <div class="hero-inner">
+      <div class="hero-greeting">
+        <span id="hero-greeting-text">Buenos días</span>
+        <span class="hero-greeting-biz" id="hero-biz-display"></span>
+      </div>
+      <div class="stat-grid">
+        <div class="stat-hero">
+          <div class="stat-hero-label">
+            <i data-lucide="sun-medium" class="stat-label-icon"></i>
+            Hoy
+          </div>
+          <div class="stat-hero-value" id="stat-hoy">$0</div>
+          <div class="stat-hero-bar"><div class="stat-bar-fill green" id="bar-hoy"></div></div>
+        </div>
+        <div class="stat-hero">
+          <div class="stat-hero-label">
+            <i data-lucide="calendar-days" class="stat-label-icon"></i>
+            Esta semana
+          </div>
+          <div class="stat-hero-value violet" id="stat-semana">$0</div>
+          <div class="stat-hero-bar"><div class="stat-bar-fill violet" id="bar-semana"></div></div>
+        </div>
+        <div class="stat-hero">
+          <div class="stat-hero-label">
+            <i data-lucide="calendar" class="stat-label-icon"></i>
+            Este mes
+          </div>
+          <div class="stat-hero-value blue" id="stat-mes">$0</div>
+          <div class="stat-hero-bar"><div class="stat-bar-fill blue" id="bar-mes"></div></div>
+        </div>
+        <div class="stat-card-mini">
+          <div class="mini-top">
+            <span class="mini-label">Gastos del mes</span>
+            <i data-lucide="trending-down" class="mini-icon red"></i>
+          </div>
+          <div class="mini-value red" id="stat-gastos">$0</div>
+        </div>
+        <div class="stat-card-mini balance-card">
+          <div class="mini-top">
+            <span class="mini-label">Balance neto</span>
+            <i data-lucide="activity" class="mini-icon amber"></i>
+          </div>
+          <div class="mini-value amber" id="stat-balance">$0</div>
+        </div>
       </div>
     </div>
   </div>
 
+  <!-- CONTENT GRID -->
+  <div class="content-grid">
 
-  <!-- ══════════════════════════════════════════
-       PANTALLA: DASHBOARD
-  ══════════════════════════════════════════ -->
-  <div id="screen-dashboard" class="screen hidden">
-
-    <!-- TOPBAR -->
-    <header class="topbar">
-      <div class="topbar-left">
-        <img src="logouq.png" alt="Uqbar" class="topbar-logo" />
-        <div class="topbar-brand">
-          <span class="topbar-app">Uqbar</span>
-          <span class="topbar-separator">·</span>
-          <span class="topbar-biz" id="topbar-biz-name">Mi Negocio</span>
+    <!-- REGISTRO -->
+    <section class="card card-registro">
+      <div class="card-header">
+        <div class="card-title-wrap">
+          <div class="card-icon-wrap">
+            <i data-lucide="plus-circle" class="card-icon"></i>
+          </div>
+          <h2 class="card-title">Nuevo movimiento</h2>
+        </div>
+        <div class="type-toggle">
+          <button class="type-btn active" data-type="ingreso" id="tbtn-ingreso">
+            <i data-lucide="arrow-down-left"></i>
+            Entrada
+          </button>
+          <button class="type-btn" data-type="gasto" id="tbtn-gasto">
+            <i data-lucide="arrow-up-right"></i>
+            Salida
+          </button>
         </div>
       </div>
-      <div class="topbar-right">
-        <div class="topbar-date" id="topbar-date"></div>
-        <button class="btn-ghost btn-sm" id="btn-logout">Salir</button>
-      </div>
-    </header>
 
-    <!-- STATS STRIP -->
-    <div class="stats-strip">
-      <div class="stat-card stat-income">
-        <span class="stat-value" id="stat-hoy">$0</span>
-        <span class="stat-label">Hoy</span>
-      </div>
-      <div class="stat-divider"></div>
-      <div class="stat-card stat-week">
-        <span class="stat-value" id="stat-semana">$0</span>
-        <span class="stat-label">Esta semana</span>
-      </div>
-      <div class="stat-divider"></div>
-      <div class="stat-card stat-month">
-        <span class="stat-value" id="stat-mes">$0</span>
-        <span class="stat-label">Este mes</span>
-      </div>
-      <div class="stat-divider"></div>
-      <div class="stat-card stat-expenses">
-        <span class="stat-value" id="stat-gastos">$0</span>
-        <span class="stat-label">Gastos del mes</span>
-      </div>
-      <div class="stat-divider"></div>
-      <div class="stat-card stat-balance">
-        <span class="stat-value" id="stat-balance">$0</span>
-        <span class="stat-label">Balance neto</span>
-      </div>
-    </div>
-
-    <!-- MAIN CONTENT -->
-    <main class="main-content">
-
-      <!-- REGISTRO RÁPIDO -->
-      <section class="panel panel-registro">
-        <div class="panel-header">
-          <h2 class="panel-title">Registrar movimiento</h2>
-          <!-- Tabs -->
-          <div class="tabs">
-            <button class="tab active" data-type="ingreso">+ Ingreso</button>
-            <button class="tab" data-type="gasto">− Gasto</button>
+      <div class="registro-body">
+        <div class="field">
+          <label id="label-concepto">¿Qué vendiste?</label>
+          <div class="field-input-wrap">
+            <i data-lucide="tag" class="field-icon"></i>
+            <input type="text" id="mov-concepto" placeholder="Ej: Corte de cabello" />
           </div>
         </div>
-
-        <div class="registro-form">
-          <div class="form-row">
-            <div class="form-group fg-grow">
-              <label id="label-concepto">Producto / servicio</label>
-              <input type="text" id="mov-concepto" placeholder="Ej: Corte de cabello" />
-            </div>
-            <div class="form-group fg-amount">
-              <label>Valor</label>
-              <input type="number" id="mov-valor" placeholder="0" min="0" step="100" />
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="form-group fg-grow">
-              <label>Nota (opcional)</label>
+        <div class="fields-row">
+          <div class="field field-grow">
+            <label>Nota <span class="optional">opcional</span></label>
+            <div class="field-input-wrap">
+              <i data-lucide="pencil-line" class="field-icon"></i>
               <input type="text" id="mov-nota" placeholder="Detalle adicional" />
             </div>
-            <div class="form-group fg-date">
-              <label>Fecha</label>
+          </div>
+          <div class="field field-date">
+            <label>Fecha</label>
+            <div class="field-input-wrap">
+              <i data-lucide="calendar" class="field-icon"></i>
               <input type="date" id="mov-fecha" />
             </div>
           </div>
-          <button class="btn-primary" id="btn-add-mov">Guardar</button>
         </div>
-      </section>
-
-      <!-- HISTORIAL -->
-      <section class="panel panel-historial">
-        <div class="panel-header">
-          <h2 class="panel-title">Movimientos recientes</h2>
-          <div class="filter-tabs">
-            <button class="filter-tab active" data-filter="todos">Todos</button>
-            <button class="filter-tab" data-filter="ingreso">Ingresos</button>
-            <button class="filter-tab" data-filter="gasto">Gastos</button>
+        <div class="amount-row">
+          <div class="field field-amount">
+            <label>Valor</label>
+            <div class="field-input-wrap amount-wrap">
+              <span class="amount-prefix">$</span>
+              <input type="number" id="mov-valor" placeholder="0" min="0" step="100" />
+            </div>
           </div>
+          <button class="btn-save" id="btn-add-mov">
+            <i data-lucide="check" class="btn-icon"></i>
+            <span>Guardar</span>
+          </button>
         </div>
-        <div id="mov-list" class="mov-list">
-          <div class="empty-state">
-            <span class="empty-icon">💳</span>
-            <p>Aún no hay movimientos.<br/>Registra tu primer ingreso o gasto.</p>
+      </div>
+    </section>
+
+    <!-- HISTORIAL -->
+    <section class="card card-historial">
+      <div class="card-header">
+        <div class="card-title-wrap">
+          <div class="card-icon-wrap">
+            <i data-lucide="list" class="card-icon"></i>
           </div>
+          <h2 class="card-title">Movimientos</h2>
         </div>
-      </section>
+        <div class="filter-pills">
+          <button class="filter-pill active" data-filter="todos">Todos</button>
+          <button class="filter-pill" data-filter="ingreso">Entradas</button>
+          <button class="filter-pill" data-filter="gasto">Salidas</button>
+        </div>
+      </div>
 
-    </main>
-
-    <!-- FOOTER -->
-    <footer class="app-footer">
-      <span>por <strong>Uqbar</strong> &nbsp;·&nbsp; <a href="https://www.uqbar.app" target="_blank">uqbar.app</a></span>
-    </footer>
+      <div id="mov-list" class="mov-list">
+        <div class="empty-state">
+          <div class="empty-icon-wrap">
+            <i data-lucide="inbox"></i>
+          </div>
+          <p class="empty-title">Todo listo para empezar</p>
+          <p class="empty-sub">Tu primer movimiento aparecerá aquí</p>
+        </div>
+      </div>
+    </section>
 
   </div>
 
-  <!-- TOAST -->
-  <div id="toast" class="toast hidden"></div>
+  <footer class="app-footer">
+    <span>por <strong>Uqbar</strong></span>
+    <span class="footer-dot">·</span>
+    <a href="https://www.uqbar.app" target="_blank">uqbar.app</a>
+  </footer>
 
-  <script src="script.js"></script>
+</div>
+
+<!-- TOAST -->
+<div id="toast" class="toast hidden">
+  <i data-lucide="check-circle" class="toast-icon"></i>
+  <span id="toast-msg"></span>
+</div>
+
+<script src="script.js"></script>
 </body>
 </html>
