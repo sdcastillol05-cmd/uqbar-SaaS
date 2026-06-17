@@ -3,9 +3,9 @@
    Supabase Auth + Movimientos por cliente
 ══════════════════════════════════════════ */
 
-// ── CONFIG: reemplaza con tus credenciales de Supabase ──
-const SUPABASE_URL = 'https://TU_PROYECTO.supabase.co';
-const SUPABASE_KEY = 'TU_ANON_KEY';
+// ── CONFIG Supabase ──
+const SUPABASE_URL = 'https://ufpnpzbhcbgxiptbcmwe.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_wqdLMWHV5iENUclFedGNvw_7eHBi7gO';
 
 const { createClient } = supabase;
 const db = createClient(SUPABASE_URL, SUPABASE_KEY);
