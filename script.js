@@ -490,8 +490,7 @@ async function loadAIAdvice(forceRefresh) {
 
 function renderAdvice(text) {
   const bodyEl = document.getElementById('ai-body');
-  // Separar por líneas no vacías (cada consejo es una línea/párrafo)
-  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  const lines = parseAdviceLines(text);
 
   if (lines.length === 0) {
     bodyEl.innerHTML = `<p class="ai-empty">${esc(text)}</p>`;
@@ -505,6 +504,44 @@ function renderAdvice(text) {
         <span>${esc(line)}</span>
       </div>`).join('')
   }</div>`;
+}
+
+// Frases introductorias/de cierre comunes que Gemini agrega aunque se le pida que no lo haga.
+// Si una "línea" empieza así (sin numeración propia), se descarta en vez de mostrarse como consejo.
+const AI_INTRO_PATTERNS = [
+  /^aqu[ií]\s+(tienes|est[aá]n|van)/i,
+  /^claro[,.]?/i,
+  /^estos?\s+son/i,
+  /^te\s+(comparto|dejo|doy)/i,
+  /^basad[oa]\s+en/i,
+  /^con\s+gusto/i,
+  /^perfecto[,.]?/i,
+  /^espero\s+que/i,
+  /^¡?listo[,!.]?/i,
+];
+
+function parseAdviceLines(text) {
+  // 1. Normalizar saltos de línea y dividir
+  let raw = text.replace(/\r/g, '').split('\n').map(l => l.trim()).filter(Boolean);
+
+  // 2. Si Gemini metió todo en una sola línea (ej: "1. Algo 2. Otra cosa 3. Más"),
+  //    separar por el patrón "número + punto" en medio del texto.
+  if (raw.length <= 1 && raw[0]) {
+    const split = raw[0].split(/(?=\d+\.\s)/g).map(s => s.trim()).filter(Boolean);
+    if (split.length > 1) raw = split;
+  }
+
+  // 3. Quitar numeración/guiones al inicio de cada línea ("1. ", "1) ", "- ", "• ")
+  const cleaned = raw.map(l => l.replace(/^(\d+[\.\)]\s*|[-•]\s*)/, '').trim());
+
+  // 4. Descartar líneas vacías tras limpiar, o que coincidan con frases de intro/cierre
+  const finalLines = cleaned.filter(l => {
+    if (!l) return false;
+    if (l.length < 8) return false; // demasiado corta para ser un consejo real
+    return !AI_INTRO_PATTERNS.some(rx => rx.test(l));
+  });
+
+  return finalLines;
 }
 
 function getAICache() {
