@@ -5,6 +5,11 @@
 const SUPABASE_URL = 'https://ufpnpzbhcbgxiptbcmwe.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_wqdLMWHV5iENUclFedGNvw_7eHBi7gO';
 
+// URL de tu Edge Function (despliega supabase-edge-function/index.ts primero)
+const AI_ADVICE_URL = `${SUPABASE_URL}/functions/v1/ai-advice`;
+const AI_CACHE_KEY = 'uq-ai-advice-cache';
+const AI_CACHE_HOURS = 6; // no volver a llamar a Gemini antes de este tiempo
+
 const { createClient } = supabase;
 const db = createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -162,6 +167,7 @@ async function bootUser(user) {
   await loadMovs();
   goDash();
   lucide.createIcons();
+  loadAIAdvice(false);
 }
 
 /* ════════════════════════════════════════
@@ -191,6 +197,7 @@ function bindDashboard() {
   });
 
   document.getElementById('btn-add-mov').addEventListener('click', addMov);
+  document.getElementById('btn-ai-refresh').addEventListener('click', () => loadAIAdvice(true));
 }
 
 /* ════════════════════════════════════════
@@ -425,6 +432,99 @@ function buildChart() {
 function rebuildChart() {
   if (weeklyChart) { weeklyChart.destroy(); weeklyChart = null; }
   buildChart();
+}
+
+/* ════════════════════════════════════════
+   AI ADVICE — Gemini via Supabase Edge Function
+════════════════════════ */
+async function loadAIAdvice(forceRefresh) {
+  const bodyEl = document.getElementById('ai-body');
+  const refreshBtn = document.getElementById('btn-ai-refresh');
+
+  // Revisar caché local (por usuario) si no se fuerza refresh
+  if (!forceRefresh) {
+    const cached = getAICache();
+    if (cached) {
+      renderAdvice(cached.advice);
+      return;
+    }
+  }
+
+  // Loading state
+  bodyEl.innerHTML = `
+    <div class="ai-loading">
+      <span class="ai-dot"></span><span class="ai-dot"></span><span class="ai-dot"></span>
+      <span class="ai-loading-text">Analizando tu negocio…</span>
+    </div>`;
+  refreshBtn.classList.add('spinning');
+
+  try {
+    const { data: { session } } = await db.auth.getSession();
+    if (!session) throw new Error('Sin sesión activa');
+
+    const res = await fetch(AI_ADVICE_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`,
+        'apikey': SUPABASE_KEY
+      }
+    });
+
+    const data = await res.json();
+    refreshBtn.classList.remove('spinning');
+
+    if (!res.ok || data.error) {
+      bodyEl.innerHTML = `<p class="ai-error">No se pudieron generar consejos en este momento. Intenta de nuevo más tarde.</p>`;
+      return;
+    }
+
+    renderAdvice(data.advice);
+    setAICache(data.advice);
+
+  } catch (err) {
+    refreshBtn.classList.remove('spinning');
+    bodyEl.innerHTML = `<p class="ai-error">No se pudo conectar con el asistente de IA. Verifica tu conexión.</p>`;
+  }
+}
+
+function renderAdvice(text) {
+  const bodyEl = document.getElementById('ai-body');
+  // Separar por líneas no vacías (cada consejo es una línea/párrafo)
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+
+  if (lines.length === 0) {
+    bodyEl.innerHTML = `<p class="ai-empty">${esc(text)}</p>`;
+    return;
+  }
+
+  bodyEl.innerHTML = `<div class="ai-advice-list">${
+    lines.map((line, i) => `
+      <div class="ai-advice-item" style="animation-delay:${i * 0.08}s">
+        <span class="ai-advice-num">${i + 1}</span>
+        <span>${esc(line)}</span>
+      </div>`).join('')
+  }</div>`;
+}
+
+function getAICache() {
+  try {
+    const raw = localStorage.getItem(AI_CACHE_KEY + '-' + (currentUser?.id || ''));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    const ageHours = (Date.now() - parsed.timestamp) / 36e5;
+    if (ageHours > AI_CACHE_HOURS) return null;
+    return parsed;
+  } catch { return null; }
+}
+
+function setAICache(advice) {
+  try {
+    localStorage.setItem(
+      AI_CACHE_KEY + '-' + (currentUser?.id || ''),
+      JSON.stringify({ advice, timestamp: Date.now() })
+    );
+  } catch {}
 }
 
 /* ════════════════════════════════════════
