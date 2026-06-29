@@ -1,5 +1,5 @@
 /* ════════════════════════════════════════
-   UQBAR · script.js v1.3
+   UQBAR · script.js v1.4
 ════════════════════════════════════════ */
 
 const SUPABASE_URL = 'https://ufpnpzbhcbgxiptbcmwe.supabase.co';
@@ -26,10 +26,10 @@ let weeklyChart    = null;
 document.addEventListener('DOMContentLoaded', async () => {
   lucide.createIcons();
   initTheme();
-  setDateGreeting();
   bindLogin();
   bindDashboard();
   bindBizEdit();
+  bindAddTxToggle();
 
   const { data: { session } } = await db.auth.getSession();
   if (session?.user) await bootUser(session.user);
@@ -55,19 +55,6 @@ document.getElementById('btn-theme').addEventListener('click', () => {
   lucide.createIcons();
   if (weeklyChart) rebuildChart();
 });
-
-/* ════════════════════════════════════════
-   DATE / GREETING
-════════════════════════ */
-function setDateGreeting() {
-  const now  = new Date();
-  const hour = now.getHours();
-  const greet = hour < 12 ? 'Buenos días' : hour < 19 ? 'Buenas tardes' : 'Buenas noches';
-  setText('greeting-time', greet);
-  const dEl = document.getElementById('topbar-date');
-  if (dEl) dEl.textContent = now.toLocaleDateString('es-CO', { weekday:'short', day:'numeric', month:'short', year:'numeric' });
-  setText('hb-month-label', now.toLocaleDateString('es-CO', { month:'long', year:'numeric' }));
-}
 
 /* ════════════════════════════════════════
    LOGIN
@@ -152,8 +139,14 @@ async function bootUser(user) {
   const { data: perfil } = await db.from('perfiles').select('*').eq('user_id', user.id).single();
   currentProfile = perfil;
   const biz = perfil?.nombre_negocio || 'Mi negocio';
+
   setText('topbar-biz-name', biz);
-  setText('greeting-biz', biz);
+  setText('page-title', `${biz} · Resumen`);
+
+  // Avatar con la inicial del negocio
+  const initial = biz.trim().charAt(0).toUpperCase() || 'U';
+  setText('nav-avatar-user', initial);
+
   document.getElementById('mov-fecha').value = todayStr();
   await loadMovs();
   goDash();
@@ -181,22 +174,15 @@ function bindBizEdit() {
     const newName = inputEl.value.trim();
     inputEl.classList.add('hidden');
     nameEl.classList.remove('hidden');
-
     if (!newName || newName === nameEl.textContent) return;
 
     nameEl.textContent = newName;
-    setText('greeting-biz', newName);
+    setText('page-title', `${newName} · Resumen`);
+    setText('nav-avatar-user', newName.trim().charAt(0).toUpperCase() || 'U');
 
     if (!currentUser) return;
-    const { error } = await db.from('perfiles')
-      .update({ nombre_negocio: newName })
-      .eq('user_id', currentUser.id);
-
-    if (error) {
-      toast('No se pudo guardar el nombre. Intenta de nuevo.', 'error');
-    } else {
-      toast('Nombre del negocio actualizado', 'success');
-    }
+    const { error } = await db.from('perfiles').update({ nombre_negocio: newName }).eq('user_id', currentUser.id);
+    toast(error ? 'No se pudo guardar el nombre. Intenta de nuevo.' : 'Nombre del negocio actualizado', error ? 'error' : 'success');
   }
 
   btnEl.addEventListener('click', enterEditMode);
@@ -205,6 +191,21 @@ function bindBizEdit() {
     if (e.key === 'Escape') { inputEl.classList.add('hidden'); nameEl.classList.remove('hidden'); }
   });
   inputEl.addEventListener('blur', saveEdit);
+}
+
+/* ════════════════════════════════════════
+   ADD TRANSACTION — collapsible toggle
+════════════════════════ */
+function bindAddTxToggle() {
+  const trigger = document.getElementById('add-tx-trigger');
+  const form = document.getElementById('add-tx-form');
+  const chevron = document.getElementById('add-tx-chevron');
+
+  trigger.addEventListener('click', () => {
+    const isHidden = form.classList.contains('hidden');
+    form.classList.toggle('hidden');
+    chevron.classList.toggle('open', isHidden);
+  });
 }
 
 /* ════════════════════════════════════════
@@ -221,7 +222,6 @@ function bindDashboard() {
       const isIn = activeType === 'ingreso';
       setText('label-concepto', isIn ? '¿Qué ingresó?' : '¿En qué se gastó?');
       document.getElementById('mov-concepto').placeholder = isIn ? 'Ej: Servicio de consultoría' : 'Ej: Insumos de producción';
-      // El "fiado" solo aplica a ingresos (dinero que aún no se cobra)
       document.getElementById('fiado-row').style.display = isIn ? 'block' : 'none';
       if (!isIn) setFiado(false);
     });
@@ -237,16 +237,13 @@ function bindDashboard() {
   });
 
   document.getElementById('fiado-toggle').addEventListener('click', () => setFiado(!isFiado));
-
   document.getElementById('btn-add-mov').addEventListener('click', addMov);
   document.getElementById('btn-ai-refresh').addEventListener('click', () => loadAIAdvice(true));
 }
 
 function setFiado(val) {
   isFiado = val;
-  const toggle = document.getElementById('fiado-toggle');
-  const checkbox = document.getElementById('fiado-checkbox');
-  toggle.classList.toggle('active', val);
+  document.getElementById('fiado-toggle').classList.toggle('active', val);
 }
 
 /* ════════════════════════════════════════
@@ -326,55 +323,72 @@ async function deleteMov(id) {
 ════════════════════════ */
 function calcStats() {
   const today = todayStr(), lun = weekStartStr(), mesI = monthStartStr();
-  let hoy = 0, hoyN = 0, semana = 0, semN = 0, mes = 0, mesN = 0, gastos = 0, fiadoTotal = 0;
+  let hoy = 0, semana = 0, mes = 0, gastos = 0, fiadoTotal = 0, totalIngHist = 0, totalGastoHist = 0;
 
   allMovs.forEach(m => {
     const vv = Number(m.valor);
     if (m.tipo === 'ingreso') {
-      if (m.fecha === today) { hoy    += vv; hoyN++; }
-      if (m.fecha >= lun)    { semana += vv; semN++; }
-      if (m.fecha >= mesI)   { mes    += vv; mesN++; }
+      if (m.fecha === today) hoy    += vv;
+      if (m.fecha >= lun)    semana += vv;
+      if (m.fecha >= mesI)   mes    += vv;
       if (m.es_fiado) fiadoTotal += vv;
+      totalIngHist += vv;
     } else {
       if (m.fecha >= mesI) gastos += vv;
+      totalGastoHist += vv;
     }
   });
 
-  const balance = mes - gastos;
-  const margen  = mes > 0 ? Math.round((balance / mes) * 100) : null;
-  const maxVal  = Math.max(hoy, semana, mes, 1);
+  const balanceMes  = mes - gastos;
+  const balanceHist = totalIngHist - totalGastoHist;
+  const margen = mes > 0 ? Math.round((balanceMes / mes) * 100) : null;
 
-  setText('stat-hoy',    fmt(hoy));
-  setText('stat-semana', fmt(semana));
-  setText('stat-mes',    fmt(mes));
-  setText('stat-gastos', fmt(gastos));
-  setText('stat-fiado',  fmt(fiadoTotal));
+  setText('stat-balance', fmt(balanceHist));
+  setText('stat-hoy',     fmt(hoy));
+  setText('stat-semana',  fmt(semana));
+  setText('stat-mes',     fmt(mes));
+  setText('stat-gastos',  fmt(gastos));
   setText('stat-total-count', String(allMovs.length));
-  setText('bs-hoy-count',  `${hoyN} ingreso${hoyN !== 1 ? 's' : ''}`);
-  setText('bs-sem-count',  `${semN} ingreso${semN !== 1 ? 's' : ''}`);
-  setText('bs-mes-count',  `${mesN} ingreso${mesN !== 1 ? 's' : ''}`);
+  setText('stat-margen',  margen !== null ? `${margen}%` : '—');
 
-  const balEl = document.getElementById('stat-balance');
-  if (balEl) { balEl.textContent = fmt(balance); balEl.className = 'ms-val ' + (balance >= 0 ? 'amber' : 'red'); }
+  // Badges
+  const marginBadge = document.getElementById('kpi-margin-badge');
+  if (marginBadge) {
+    marginBadge.innerHTML = `<i data-lucide="trending-up"></i>${margen !== null ? margen + '% margen' : 'Sin datos'}`;
+  }
+  const healthBadge = document.getElementById('kpi-health-badge');
+  if (healthBadge) {
+    let label = 'Sin datos', cls = '';
+    if (margen !== null) {
+      if (margen >= 30) { label = 'Saludable'; cls=''; }
+      else if (margen >= 10) { label = 'Estable'; cls='warn'; }
+      else { label = 'Ajustado'; cls='alert'; }
+    }
+    healthBadge.innerHTML = `<i data-lucide="trending-up"></i>${label}`;
+  }
 
-  setText('stat-margen', margen !== null ? `${margen}%` : '—');
+  // Cash flow legend totals (last 7 days)
+  const sevenDaysAgo = new Date(); sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+  const sevenStr = sevenDaysAgo.toISOString().split('T')[0];
+  const incomeWeek  = allMovs.filter(m => m.tipo==='ingreso' && m.fecha >= sevenStr).reduce((s,m)=>s+Number(m.valor),0);
+  const expenseWeek = allMovs.filter(m => m.tipo==='gasto'   && m.fecha >= sevenStr).reduce((s,m)=>s+Number(m.valor),0);
+  setText('cf-income-total', fmt(incomeWeek));
+  setText('cf-expense-total', fmt(expenseWeek));
 
-  setBar('bar-hoy',    hoy    / maxVal * 100);
-  setBar('bar-semana', semana / maxVal * 100);
-  setBar('bar-mes',    mes    / maxVal * 100);
+  setText('tx-count-label', `${allMovs.length} registro${allMovs.length !== 1 ? 's' : ''}`);
+
+  lucide.createIcons();
 }
 
 /* ════════════════════════════════════════
    RENDER LIST
 ════════════════════════ */
-const MEDIO_PAGO_LABELS = {
-  efectivo: 'Efectivo', transferencia: 'Transferencia', tarjeta: 'Tarjeta', otro: 'Otro'
-};
+const MEDIO_PAGO_LABELS = { efectivo:'Efectivo', transferencia:'Transferencia', tarjeta:'Tarjeta', otro:'Otro' };
 
 function renderMovs() {
   const list = document.getElementById('mov-list');
   let data;
-  if (activeFilter === 'todos')   data = allMovs;
+  if (activeFilter === 'todos')      data = allMovs;
   else if (activeFilter === 'fiado') data = allMovs.filter(m => m.es_fiado);
   else data = allMovs.filter(m => m.tipo === activeFilter);
 
@@ -384,7 +398,7 @@ function renderMovs() {
       <div class="empty-st">
         <div class="empty-ico-wrap"><i data-lucide="inbox"></i></div>
         <p class="empty-title">Sin ${labels[activeFilter]} aún</p>
-        <p class="empty-sub">Registra el primero en el panel de la izquierda</p>
+        <p class="empty-sub">Registra el primero con el botón inferior</p>
       </div>`;
     lucide.createIcons();
     return;
@@ -394,11 +408,8 @@ function renderMovs() {
     const fd = new Date(m.fecha + 'T12:00:00').toLocaleDateString('es-CO', { day:'numeric', month:'short', year:'numeric' });
     const sg = m.tipo === 'ingreso' ? '+' : '−';
     const ic = m.tipo === 'ingreso' ? 'arrow-down-left' : 'arrow-up-right';
-
-    const fiadoBadge = m.es_fiado
-      ? `<span class="badge badge-fiado"><i data-lucide="clock-3"></i>Fiado</span>` : '';
-    const pagoBadge = m.medio_pago
-      ? `<span class="badge badge-pago">${esc(MEDIO_PAGO_LABELS[m.medio_pago] || m.medio_pago)}</span>` : '';
+    const fiadoBadge = m.es_fiado ? `<span class="badge badge-fiado"><i data-lucide="clock-3"></i>Fiado</span>` : '';
+    const pagoBadge  = m.medio_pago ? `<span class="badge badge-pago">${esc(MEDIO_PAGO_LABELS[m.medio_pago] || m.medio_pago)}</span>` : '';
     const clienteTxt = m.cliente ? ` · ${esc(m.cliente)}` : '';
 
     return `<div class="mov-item">
@@ -419,16 +430,16 @@ function renderMovs() {
 }
 
 /* ════════════════════════════════════════
-   CHART — last 7 days
+   CHART — last 7 days, area style like mockup
 ════════════════════════ */
 function buildChart() {
   const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
-  const gridColor = isDark ? 'rgba(180,150,255,0.08)' : 'rgba(45,28,127,0.06)';
-  const tickColor = isDark ? 'rgba(180,150,255,0.4)'  : 'rgba(45,28,127,0.45)';
+  const gridColor = isDark ? 'rgba(180,150,255,0.07)' : 'rgba(45,28,127,0.06)';
+  const tickColor = isDark ? 'rgba(180,150,255,0.38)' : 'rgba(45,28,127,0.45)';
 
   const days = [];
   for (let i = 6; i >= 0; i--) { const d = new Date(); d.setDate(d.getDate() - i); days.push(d.toISOString().split('T')[0]); }
-  const labels = days.map(d => new Date(d + 'T12:00:00').toLocaleDateString('es-CO', { weekday:'short', day:'numeric' }));
+  const labels = days.map(d => new Date(d + 'T12:00:00').toLocaleDateString('es-CO', { weekday:'short' }));
 
   const inData  = days.map(d => allMovs.filter(m => m.tipo==='ingreso' && m.fecha===d).reduce((s,m)=>s+Number(m.valor),0));
   const outData = days.map(d => allMovs.filter(m => m.tipo==='gasto'   && m.fecha===d).reduce((s,m)=>s+Number(m.valor),0));
@@ -437,16 +448,32 @@ function buildChart() {
   if (!ctx) return;
   if (weeklyChart) { weeklyChart.destroy(); weeklyChart = null; }
 
-  const greenColor = isDark ? 'rgba(110,231,183,.75)' : 'rgba(5,150,105,.75)';
-  const greenFill  = isDark ? 'rgba(110,231,183,.10)' : 'rgba(5,150,105,.07)';
-  const redColor   = isDark ? 'rgba(251,113,133,.7)'  : 'rgba(220,38,38,.65)';
-  const redFill    = isDark ? 'rgba(251,113,133,.08)' : 'rgba(220,38,38,.05)';
+  const accentSolid = isDark ? '#9163ff' : '#6536d8';
+  const accentFillTop = isDark ? 'rgba(145,99,255,0.28)' : 'rgba(101,54,216,0.18)';
+  const accentFillBottom = isDark ? 'rgba(145,99,255,0)' : 'rgba(101,54,216,0)';
+  const amberSolid = isDark ? '#FFB020' : '#b45309';
+
+  const gradient = ctx.getContext('2d').createLinearGradient(0, 0, 0, 190);
+  gradient.addColorStop(0, accentFillTop);
+  gradient.addColorStop(1, accentFillBottom);
 
   weeklyChart = new Chart(ctx, {
-    type: 'bar',
+    type: 'line',
     data: { labels, datasets: [
-      { label:'Ingresos', data:inData, backgroundColor:greenFill, borderColor:greenColor, borderWidth:1.5, borderRadius:7, borderSkipped:false },
-      { label:'Egresos',  data:outData, backgroundColor:redFill,  borderColor:redColor,   borderWidth:1.5, borderRadius:7, borderSkipped:false }
+      {
+        label:'Ingresos', data:inData,
+        borderColor:accentSolid, backgroundColor:gradient,
+        borderWidth:2.5, fill:true, tension:.4,
+        pointRadius:3, pointBackgroundColor:accentSolid, pointBorderColor:isDark?'#181229':'#fff', pointBorderWidth:2,
+        pointHoverRadius:5,
+      },
+      {
+        label:'Egresos', data:outData,
+        borderColor:amberSolid, backgroundColor:'transparent',
+        borderWidth:2, borderDash:[5,4], fill:false, tension:.4,
+        pointRadius:2.5, pointBackgroundColor:amberSolid, pointBorderColor:isDark?'#181229':'#fff', pointBorderWidth:1.5,
+        pointHoverRadius:4,
+      }
     ]},
     options: {
       responsive:true, maintainAspectRatio:false,
@@ -460,14 +487,14 @@ function buildChart() {
           borderWidth:1, cornerRadius:11, padding:11,
           titleFont:{ family:"'Bricolage Grotesque',sans-serif", weight:'700', size:12 },
           bodyFont:{ family:"'Plus Jakarta Sans',sans-serif", size:12 },
-          callbacks: { label: ctx => ` ${ctx.dataset.label}: ${fmt(ctx.parsed.y)}` }
+          callbacks: { label: c => ` ${c.dataset.label}: ${fmt(c.parsed.y)}` }
         }
       },
       scales: {
-        x: { grid:{ color:gridColor, drawBorder:false }, ticks:{ color:tickColor, font:{ family:"'Plus Jakarta Sans',sans-serif", size:10, weight:'600' } }, border:{ display:false } },
+        x: { grid:{ display:false }, ticks:{ color:tickColor, font:{ family:"'Plus Jakarta Sans',sans-serif", size:10, weight:'600' } }, border:{ display:false } },
         y: { grid:{ color:gridColor, drawBorder:false },
              ticks:{ color:tickColor, font:{ family:"'Plus Jakarta Sans',sans-serif", size:10 },
-                     callback: v => v===0?'0': v>=1000000?(v/1000000).toFixed(1)+'M': v>=1000?(v/1000).toFixed(0)+'k': v },
+                     callback: val => val===0?'0': val>=1000000?(val/1000000).toFixed(1)+'M': val>=1000?(val/1000).toFixed(0)+'k': val },
              border:{ display:false } }
       },
       interaction:{ mode:'index', intersect:false },
@@ -525,11 +552,7 @@ async function loadAIAdvice(forceRefresh) {
 function renderAdvice(text) {
   const bodyEl = document.getElementById('ai-body');
   const lines = parseAdviceLines(text);
-
-  if (lines.length === 0) {
-    bodyEl.innerHTML = `<p class="ai-empty">${esc(text)}</p>`;
-    return;
-  }
+  if (lines.length === 0) { bodyEl.innerHTML = `<p class="ai-empty">${esc(text)}</p>`; return; }
 
   bodyEl.innerHTML = `<div class="ai-advice-list">${
     lines.map((line, i) => `
@@ -578,7 +601,6 @@ function monthStartStr(){ const now=new Date(); return `${now.getFullYear()}-${S
 function fmt(n) { return new Intl.NumberFormat('es-CO',{style:'currency',currency:'COP',minimumFractionDigits:0,maximumFractionDigits:0}).format(n); }
 function v(id) { return (document.getElementById(id)?.value || ''); }
 function setText(id,txt) { const el=document.getElementById(id); if (el) el.textContent = txt; }
-function setBar(id,pct)  { const el=document.getElementById(id); if (el) el.style.width = Math.min(100,pct)+'%'; }
 function showErr(el,msg) { el.textContent = msg; el.classList.remove('hidden'); setTimeout(()=>el.classList.add('hidden'),4000); }
 
 let _toastT;

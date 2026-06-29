@@ -111,24 +111,18 @@
 
 <!-- ══════ DASHBOARD ══════ -->
 <div id="screen-dashboard" class="screen hidden">
-
-  <!-- ambient bg for whole dashboard -->
   <div class="dash-bg">
     <div class="dash-orb dash-orb-1"></div>
     <div class="dash-orb dash-orb-2"></div>
     <div class="dash-mesh"></div>
   </div>
 
-  <!-- NAV -->
+  <!-- NAV — avatar + brand + biz name -->
   <nav class="nav">
     <div class="nav-l">
-      <div class="nav-brand">
-        <img src="logouq.png" alt="" class="nav-logo"/>
-        <span class="nav-name">Uqbar</span>
-      </div>
+      <div class="nav-avatar">U</div>
+      <span class="nav-name">Uqbar</span>
       <div class="nav-divider"></div>
-
-      <!-- editable business name -->
       <div class="biz-edit-wrap" id="biz-edit-wrap">
         <span class="nav-biz" id="topbar-biz-name">—</span>
         <input type="text" class="biz-edit-input hidden" id="biz-edit-input" maxlength="40"/>
@@ -138,256 +132,244 @@
       </div>
     </div>
     <div class="nav-r">
-      <span class="nav-date" id="topbar-date"></span>
       <button class="btn-icon-only" id="btn-theme" title="Cambiar tema">
         <i data-lucide="sun" class="ico-light"></i>
         <i data-lucide="moon" class="ico-dark"></i>
       </button>
+      <div class="nav-avatar nav-avatar-sm" id="nav-avatar-user">U</div>
       <button class="btn-ghost-sm" id="btn-logout">
         <i data-lucide="log-out"></i><span>Salir</span>
       </button>
     </div>
   </nav>
 
-  <!-- HERO BAND -->
-  <section class="hero-band">
-    <div class="hb-ambient"><div class="hb-orb"></div></div>
-    <div class="hb-inner">
+  <div class="page-wrap">
 
-      <div class="hb-top">
-        <div class="hb-greeting">
-          <span id="greeting-time" class="gt-time">Buenos días</span>
-          <span id="greeting-biz" class="gt-biz">—</span>
+    <!-- PAGE HEADER -->
+    <header class="page-header">
+      <h1 id="page-title">Resumen del negocio</h1>
+      <p>Tu pulso financiero en tiempo real — ingresos, gastos y qué hacer después.</p>
+    </header>
+
+    <!-- STAT GRID — 4 + 3, mockup layout -->
+    <div class="stat-grid-7">
+      <div class="kpi-card kpi-balance">
+        <div class="kpi-top">
+          <div class="kpi-icon" style="--ic:#00BBFF"><i data-lucide="wallet"></i></div>
+          <span class="kpi-badge" id="kpi-margin-badge"><i data-lucide="trending-up"></i>—</span>
         </div>
-        <div class="hb-period-badge">
-          <i data-lucide="calendar-days"></i>
-          <span id="hb-month-label">Junio 2026</span>
-        </div>
+        <span class="kpi-label">Balance neto</span>
+        <span class="kpi-value" id="stat-balance">$0</span>
+        <span class="kpi-sub">Ingresos menos gastos, histórico</span>
       </div>
 
-      <div class="big-stats">
-        <div class="bs-card bs-today">
-          <div class="bs-eyebrow"><i data-lucide="sun-medium"></i> Hoy</div>
-          <div class="bs-value" id="stat-hoy">$0</div>
-          <div class="bs-sub" id="bs-hoy-count">0 ingresos</div>
-          <div class="bs-progress"><div class="bs-bar green" id="bar-hoy"></div></div>
+      <div class="kpi-card">
+        <div class="kpi-top">
+          <div class="kpi-icon" style="--ic:#FF5CA8"><i data-lucide="calendar-days"></i></div>
         </div>
-        <div class="bs-card bs-week">
-          <div class="bs-eyebrow"><i data-lucide="trending-up"></i> Esta semana</div>
-          <div class="bs-value violet" id="stat-semana">$0</div>
-          <div class="bs-sub" id="bs-sem-count">0 ingresos</div>
-          <div class="bs-progress"><div class="bs-bar violet" id="bar-semana"></div></div>
-        </div>
-        <div class="bs-card bs-month">
-          <div class="bs-eyebrow"><i data-lucide="calendar"></i> Este mes</div>
-          <div class="bs-value blue" id="stat-mes">$0</div>
-          <div class="bs-sub" id="bs-mes-count">0 ingresos</div>
-          <div class="bs-progress"><div class="bs-bar blue" id="bar-mes"></div></div>
-        </div>
+        <span class="kpi-label">Ingresos de hoy</span>
+        <span class="kpi-value" id="stat-hoy">$0</span>
+        <span class="kpi-sub">Registrado hoy</span>
       </div>
 
-      <div class="mini-row">
-        <div class="mini-stat">
-          <div class="ms-icon red"><i data-lucide="trending-down"></i></div>
-          <div class="ms-body">
-            <span class="ms-label">Egresos del mes</span>
-            <span class="ms-val red" id="stat-gastos">$0</span>
-          </div>
+      <div class="kpi-card">
+        <div class="kpi-top">
+          <div class="kpi-icon" style="--ic:#FFB020"><i data-lucide="calendar-range"></i></div>
         </div>
-        <div class="mini-stat">
-          <div class="ms-icon amber"><i data-lucide="activity"></i></div>
-          <div class="ms-body">
-            <span class="ms-label">Balance neto</span>
-            <span class="ms-val amber" id="stat-balance">$0</span>
-          </div>
-        </div>
-        <div class="mini-stat">
-          <div class="ms-icon green"><i data-lucide="receipt"></i></div>
-          <div class="ms-body">
-            <span class="ms-label">Movimientos totales</span>
-            <span class="ms-val green" id="stat-total-count">0</span>
-          </div>
-        </div>
-        <div class="mini-stat">
-          <div class="ms-icon red2"><i data-lucide="circle-dollar-sign"></i></div>
-          <div class="ms-body">
-            <span class="ms-label">Por cobrar (fiado)</span>
-            <span class="ms-val red2" id="stat-fiado">$0</span>
-          </div>
-        </div>
-        <div class="mini-stat mini-stat-wide">
-          <div class="ms-icon violet"><i data-lucide="percent"></i></div>
-          <div class="ms-body">
-            <span class="ms-label">Margen del mes</span>
-            <span class="ms-val violet" id="stat-margen">—</span>
-          </div>
-        </div>
+        <span class="kpi-label">Ingresos semana</span>
+        <span class="kpi-value" id="stat-semana">$0</span>
+        <span class="kpi-sub">Últimos 7 días</span>
       </div>
-    </div>
-  </section>
 
-  <!-- AI BAND — large, full width, hero treatment -->
-  <section class="ai-band">
-    <div class="ai-card" id="ai-card">
-      <div class="ai-glow-orb"></div>
-      <div class="ai-card-head">
-        <div class="ai-icon-wrap">
-          <i data-lucide="sparkles" class="ai-icon"></i>
+      <div class="kpi-card">
+        <div class="kpi-top">
+          <div class="kpi-icon" style="--ic:#7C5CFC"><i data-lucide="trending-up"></i></div>
         </div>
-        <div class="ai-title-wrap">
-          <span class="ai-title">Asistente de negocio</span>
-          <span class="ai-sub">Consejos basados en tus últimos 30 días</span>
-        </div>
-        <button class="btn-ai-refresh" id="btn-ai-refresh" title="Actualizar consejos">
-          <i data-lucide="refresh-cw"></i>
-        </button>
+        <span class="kpi-label">Ingresos del mes</span>
+        <span class="kpi-value" id="stat-mes">$0</span>
+        <span class="kpi-sub">Mes calendario actual</span>
       </div>
-      <div class="ai-body" id="ai-body">
-        <div class="ai-loading">
-          <span class="ai-dot"></span><span class="ai-dot"></span><span class="ai-dot"></span>
-          <span class="ai-loading-text">Analizando tu negocio…</span>
+
+      <div class="kpi-card">
+        <div class="kpi-top">
+          <div class="kpi-icon" style="--ic:#FF6B5C"><i data-lucide="banknote"></i></div>
         </div>
+        <span class="kpi-label">Gastos del mes</span>
+        <span class="kpi-value" id="stat-gastos">$0</span>
+        <span class="kpi-sub">Mes calendario actual</span>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-top">
+          <div class="kpi-icon" style="--ic:#22D3C5"><i data-lucide="hash"></i></div>
+        </div>
+        <span class="kpi-label">Movimientos</span>
+        <span class="kpi-value" id="stat-total-count">0</span>
+        <span class="kpi-sub">Total registrados</span>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-top">
+          <div class="kpi-icon" style="--ic:#00E0A4"><i data-lucide="piggy-bank"></i></div>
+          <span class="kpi-badge kpi-badge-status" id="kpi-health-badge"><i data-lucide="trending-up"></i>—</span>
+        </div>
+        <span class="kpi-label">Margen del mes</span>
+        <span class="kpi-value" id="stat-margen">—</span>
+        <span class="kpi-sub">Neto sobre ingreso bruto</span>
       </div>
     </div>
-  </section>
 
-  <!-- MAIN GRID -->
-  <div class="main-grid">
+    <!-- BOTTOM ROW: Cash Flow + AI Advisor -->
+    <div class="bottom-grid">
 
-    <div class="col-left">
-
-      <!-- REGISTRO CARD -->
-      <div class="card card-registro">
-        <div class="card-head-row">
-          <div class="ch-left">
-            <div class="ch-icon-wrap"><i data-lucide="plus-circle" class="ch-ico"></i></div>
-            <span class="ch-title">Nuevo movimiento</span>
+      <!-- CASH FLOW CARD -->
+      <div class="panel panel-cashflow">
+        <div class="panel-head">
+          <div>
+            <span class="panel-title">Flujo de caja</span>
+            <span class="panel-sub">Ingresos vs. gastos, últimos 7 días</span>
           </div>
-          <div class="type-seg">
-            <button class="tseg-btn active" data-type="ingreso" id="tbtn-in">
-              <i data-lucide="arrow-down-left"></i>Ingreso
-            </button>
-            <button class="tseg-btn" data-type="gasto" id="tbtn-out">
-              <i data-lucide="arrow-up-right"></i>Egreso
-            </button>
-          </div>
-        </div>
-
-        <div class="reg-body">
-          <div class="field">
-            <label id="label-concepto">¿Qué ingresó?</label>
-            <div class="fi-wrap">
-              <i data-lucide="tag" class="fi-ico"></i>
-              <input type="text" id="mov-concepto" placeholder="Ej: Servicio de diseño"/>
-            </div>
-          </div>
-
-          <div class="field-row">
-            <div class="field fg-grow">
-              <label>Nota <span class="opt">opcional</span></label>
-              <div class="fi-wrap">
-                <i data-lucide="pencil-line" class="fi-ico"></i>
-                <input type="text" id="mov-nota" placeholder="Detalle adicional"/>
-              </div>
-            </div>
-            <div class="field fg-date">
-              <label>Fecha</label>
-              <div class="fi-wrap">
-                <i data-lucide="calendar" class="fi-ico"></i>
-                <input type="date" id="mov-fecha"/>
-              </div>
-            </div>
-          </div>
-
-          <div class="field-row">
-            <div class="field fg-grow">
-              <label>Medio de pago</label>
-              <div class="fi-wrap">
-                <i data-lucide="credit-card" class="fi-ico"></i>
-                <select id="mov-medio-pago">
-                  <option value="efectivo">Efectivo</option>
-                  <option value="transferencia">Transferencia</option>
-                  <option value="tarjeta">Tarjeta</option>
-                  <option value="otro">Otro</option>
-                </select>
-              </div>
-            </div>
-            <div class="field fg-cliente">
-              <label>Cliente <span class="opt">opcional</span></label>
-              <div class="fi-wrap">
-                <i data-lucide="user" class="fi-ico"></i>
-                <input type="text" id="mov-cliente" placeholder="Nombre"/>
-              </div>
-            </div>
-          </div>
-
-          <div class="fiado-row" id="fiado-row">
-            <button type="button" class="fiado-toggle" id="fiado-toggle">
-              <span class="fiado-checkbox" id="fiado-checkbox"><i data-lucide="check"></i></span>
-              <span class="fiado-text">
-                <i data-lucide="clock-3" class="fiado-ico"></i>
-                Es fiado / queda debiendo
-              </span>
-            </button>
-          </div>
-
-          <div class="amount-save-row">
-            <div class="field fg-amount">
-              <label>Valor</label>
-              <div class="fi-wrap fi-amount">
-                <span class="fi-prefix">$</span>
-                <input type="number" id="mov-valor" placeholder="0" min="0" step="100"/>
-              </div>
-            </div>
-            <button class="btn-save" id="btn-add-mov">
-              <i data-lucide="check"></i><span>Guardar</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- CHART CARD -->
-      <div class="card card-chart">
-        <div class="card-head-row">
-          <div class="ch-left">
-            <div class="ch-icon-wrap"><i data-lucide="bar-chart-3" class="ch-ico"></i></div>
-            <span class="ch-title">Últimos 7 días</span>
-          </div>
-          <div class="chart-legend">
-            <span class="cl-dot green"></span><span class="cl-label">Ingresos</span>
-            <span class="cl-dot red"></span><span class="cl-label">Egresos</span>
+          <div class="cf-legend">
+            <span class="cf-leg"><span class="cf-dot dot-income"></span>Ingresos <strong id="cf-income-total">$0</strong></span>
+            <span class="cf-leg"><span class="cf-dot dot-expense"></span>Gastos <strong id="cf-expense-total">$0</strong></span>
           </div>
         </div>
         <div class="chart-wrap">
           <canvas id="chart-weekly"></canvas>
         </div>
-      </div>
-    </div>
 
-    <div class="col-right">
-      <div class="card card-historial">
-        <div class="card-head-row">
-          <div class="ch-left">
-            <div class="ch-icon-wrap"><i data-lucide="list" class="ch-ico"></i></div>
-            <span class="ch-title">Movimientos</span>
-          </div>
-          <div class="filter-seg">
-            <button class="fseg-btn active" data-filter="todos">Todos</button>
-            <button class="fseg-btn" data-filter="ingreso">Ingresos</button>
-            <button class="fseg-btn" data-filter="gasto">Egresos</button>
-            <button class="fseg-btn" data-filter="fiado">Fiado</button>
-          </div>
+        <!-- TRANSACTIONS sub-section inside same column -->
+        <div class="tx-subhead">
+          <span class="panel-title-sm">Movimientos</span>
+          <span class="tx-count" id="tx-count-label">0 registros</span>
+        </div>
+        <div class="filter-seg filter-seg-tx">
+          <button class="fseg-btn active" data-filter="todos">Todos</button>
+          <button class="fseg-btn" data-filter="ingreso">Ingresos</button>
+          <button class="fseg-btn" data-filter="gasto">Egresos</button>
+          <button class="fseg-btn" data-filter="fiado">Fiado</button>
         </div>
         <div class="hist-scroll" id="mov-list">
           <div class="empty-st">
             <div class="empty-ico-wrap"><i data-lucide="inbox"></i></div>
             <p class="empty-title">Sin movimientos aún</p>
-            <p class="empty-sub">Registra el primero en el panel de la izquierda</p>
+            <p class="empty-sub">Registra el primero con el botón inferior</p>
           </div>
         </div>
       </div>
-    </div>
 
+      <!-- AI ADVISOR PANEL -->
+      <div class="panel panel-ai">
+        <div class="panel-head panel-head-ai">
+          <div class="ai-icon-wrap"><i data-lucide="sparkles" class="ai-icon"></i></div>
+          <div>
+            <span class="panel-title">Asesor IA</span>
+            <span class="panel-sub">Ideas generadas según tu actividad</span>
+          </div>
+          <button class="btn-ai-refresh" id="btn-ai-refresh" title="Actualizar"><i data-lucide="refresh-cw"></i></button>
+        </div>
+        <div class="ai-body" id="ai-body">
+          <div class="ai-loading">
+            <span class="ai-dot"></span><span class="ai-dot"></span><span class="ai-dot"></span>
+            <span class="ai-loading-text">Analizando tu negocio…</span>
+          </div>
+        </div>
+
+        <!-- ADD TRANSACTION -->
+        <div class="add-tx-section">
+          <button class="add-tx-trigger" id="add-tx-trigger">
+            <div class="add-tx-icon"><i data-lucide="plus"></i></div>
+            <div class="add-tx-text">
+              <span class="panel-title-sm">Nuevo movimiento</span>
+              <span class="panel-sub">Registra un ingreso o un gasto</span>
+            </div>
+            <i data-lucide="chevron-down" class="add-tx-chevron" id="add-tx-chevron"></i>
+          </button>
+
+          <div class="add-tx-form hidden" id="add-tx-form">
+            <div class="type-seg">
+              <button class="tseg-btn active" data-type="ingreso" id="tbtn-in">
+                <i data-lucide="arrow-down-left"></i>Ingreso
+              </button>
+              <button class="tseg-btn" data-type="gasto" id="tbtn-out">
+                <i data-lucide="arrow-up-right"></i>Egreso
+              </button>
+            </div>
+
+            <div class="field">
+              <label id="label-concepto">¿Qué ingresó?</label>
+              <div class="fi-wrap">
+                <i data-lucide="tag" class="fi-ico"></i>
+                <input type="text" id="mov-concepto" placeholder="Ej: Servicio de diseño"/>
+              </div>
+            </div>
+
+            <div class="field-row">
+              <div class="field fg-grow">
+                <label>Nota <span class="opt">opcional</span></label>
+                <div class="fi-wrap">
+                  <i data-lucide="pencil-line" class="fi-ico"></i>
+                  <input type="text" id="mov-nota" placeholder="Detalle adicional"/>
+                </div>
+              </div>
+              <div class="field fg-date">
+                <label>Fecha</label>
+                <div class="fi-wrap">
+                  <i data-lucide="calendar" class="fi-ico"></i>
+                  <input type="date" id="mov-fecha"/>
+                </div>
+              </div>
+            </div>
+
+            <div class="field-row">
+              <div class="field fg-grow">
+                <label>Medio de pago</label>
+                <div class="fi-wrap">
+                  <i data-lucide="credit-card" class="fi-ico"></i>
+                  <select id="mov-medio-pago">
+                    <option value="efectivo">Efectivo</option>
+                    <option value="transferencia">Transferencia</option>
+                    <option value="tarjeta">Tarjeta</option>
+                    <option value="otro">Otro</option>
+                  </select>
+                </div>
+              </div>
+              <div class="field fg-cliente">
+                <label>Cliente <span class="opt">opcional</span></label>
+                <div class="fi-wrap">
+                  <i data-lucide="user" class="fi-ico"></i>
+                  <input type="text" id="mov-cliente" placeholder="Nombre"/>
+                </div>
+              </div>
+            </div>
+
+            <div class="fiado-row" id="fiado-row">
+              <button type="button" class="fiado-toggle" id="fiado-toggle">
+                <span class="fiado-checkbox" id="fiado-checkbox"><i data-lucide="check"></i></span>
+                <span class="fiado-text">
+                  <i data-lucide="clock-3" class="fiado-ico"></i>
+                  Es fiado / queda debiendo
+                </span>
+              </button>
+            </div>
+
+            <div class="amount-save-row">
+              <div class="field fg-amount">
+                <label>Valor</label>
+                <div class="fi-wrap fi-amount">
+                  <span class="fi-prefix">$</span>
+                  <input type="number" id="mov-valor" placeholder="0" min="0" step="100"/>
+                </div>
+              </div>
+              <button class="btn-save" id="btn-add-mov">
+                <i data-lucide="check"></i><span>Guardar</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
   </div>
 
   <footer class="app-footer">
