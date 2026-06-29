@@ -1,14 +1,13 @@
 /* ════════════════════════════════════════
-   UQBAR · script.js v1.2
+   UQBAR · script.js v1.3
 ════════════════════════════════════════ */
 
 const SUPABASE_URL = 'https://ufpnpzbhcbgxiptbcmwe.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_wqdLMWHV5iENUclFedGNvw_7eHBi7gO';
 
-// URL de tu Edge Function (despliega supabase-edge-function/index.ts primero)
 const AI_ADVICE_URL = `${SUPABASE_URL}/functions/v1/ai-advice`;
 const AI_CACHE_KEY = 'uq-ai-advice-cache';
-const AI_CACHE_HOURS = 6; // no volver a llamar a Gemini antes de este tiempo
+const AI_CACHE_HOURS = 6;
 
 const { createClient } = supabase;
 const db = createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -18,6 +17,7 @@ let currentProfile = null;
 let allMovs        = [];
 let activeType     = 'ingreso';
 let activeFilter   = 'todos';
+let isFiado        = false;
 let weeklyChart    = null;
 
 /* ════════════════════════════════════════
@@ -29,6 +29,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   setDateGreeting();
   bindLogin();
   bindDashboard();
+  bindBizEdit();
 
   const { data: { session } } = await db.auth.getSession();
   if (session?.user) await bootUser(session.user);
@@ -62,17 +63,10 @@ function setDateGreeting() {
   const now  = new Date();
   const hour = now.getHours();
   const greet = hour < 12 ? 'Buenos días' : hour < 19 ? 'Buenas tardes' : 'Buenas noches';
-
-  const gEl = document.getElementById('greeting-time');
-  if (gEl) gEl.textContent = greet;
-
+  setText('greeting-time', greet);
   const dEl = document.getElementById('topbar-date');
-  if (dEl) dEl.textContent = now.toLocaleDateString('es-CO', {
-    weekday:'short', day:'numeric', month:'short', year:'numeric'
-  });
-
-  const mEl = document.getElementById('hb-month-label');
-  if (mEl) mEl.textContent = now.toLocaleDateString('es-CO', { month:'long', year:'numeric' });
+  if (dEl) dEl.textContent = now.toLocaleDateString('es-CO', { weekday:'short', day:'numeric', month:'short', year:'numeric' });
+  setText('hb-month-label', now.toLocaleDateString('es-CO', { month:'long', year:'numeric' }));
 }
 
 /* ════════════════════════════════════════
@@ -91,19 +85,16 @@ function bindLogin() {
   });
   document.getElementById('eye-login')?.addEventListener('click', () => {
     const inp = document.getElementById('login-password');
-    inp.type  = inp.type === 'password' ? 'text' : 'password';
+    inp.type = inp.type === 'password' ? 'text' : 'password';
   });
   document.getElementById('btn-login').addEventListener('click', doLogin);
-  document.getElementById('login-password').addEventListener('keydown', e => {
-    if (e.key === 'Enter') doLogin();
-  });
+  document.getElementById('login-password').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
   document.getElementById('btn-register').addEventListener('click', doRegister);
 }
 
 async function doLogin() {
-  const email    = v('login-email').trim();
-  const password = v('login-password');
-  const errEl    = document.getElementById('login-error');
+  const email = v('login-email').trim(), password = v('login-password');
+  const errEl = document.getElementById('login-error');
   if (!email || !password) return showErr(errEl, 'Completa los dos campos.');
   const btn = document.getElementById('btn-login');
   btn.disabled = true; btn.textContent = 'Ingresando…';
@@ -171,6 +162,52 @@ async function bootUser(user) {
 }
 
 /* ════════════════════════════════════════
+   EDITAR NOMBRE DEL NEGOCIO
+════════════════════════ */
+function bindBizEdit() {
+  const nameEl  = document.getElementById('topbar-biz-name');
+  const inputEl = document.getElementById('biz-edit-input');
+  const btnEl   = document.getElementById('biz-edit-btn');
+
+  function enterEditMode() {
+    inputEl.value = nameEl.textContent;
+    nameEl.classList.add('hidden');
+    inputEl.classList.remove('hidden');
+    inputEl.focus();
+    inputEl.select();
+  }
+
+  async function saveEdit() {
+    const newName = inputEl.value.trim();
+    inputEl.classList.add('hidden');
+    nameEl.classList.remove('hidden');
+
+    if (!newName || newName === nameEl.textContent) return;
+
+    nameEl.textContent = newName;
+    setText('greeting-biz', newName);
+
+    if (!currentUser) return;
+    const { error } = await db.from('perfiles')
+      .update({ nombre_negocio: newName })
+      .eq('user_id', currentUser.id);
+
+    if (error) {
+      toast('No se pudo guardar el nombre. Intenta de nuevo.', 'error');
+    } else {
+      toast('Nombre del negocio actualizado', 'success');
+    }
+  }
+
+  btnEl.addEventListener('click', enterEditMode);
+  inputEl.addEventListener('keydown', e => {
+    if (e.key === 'Enter') inputEl.blur();
+    if (e.key === 'Escape') { inputEl.classList.add('hidden'); nameEl.classList.remove('hidden'); }
+  });
+  inputEl.addEventListener('blur', saveEdit);
+}
+
+/* ════════════════════════════════════════
    DASHBOARD BIND
 ════════════════════════ */
 function bindDashboard() {
@@ -184,6 +221,9 @@ function bindDashboard() {
       const isIn = activeType === 'ingreso';
       setText('label-concepto', isIn ? '¿Qué ingresó?' : '¿En qué se gastó?');
       document.getElementById('mov-concepto').placeholder = isIn ? 'Ej: Servicio de consultoría' : 'Ej: Insumos de producción';
+      // El "fiado" solo aplica a ingresos (dinero que aún no se cobra)
+      document.getElementById('fiado-row').style.display = isIn ? 'block' : 'none';
+      if (!isIn) setFiado(false);
     });
   });
 
@@ -196,8 +236,17 @@ function bindDashboard() {
     });
   });
 
+  document.getElementById('fiado-toggle').addEventListener('click', () => setFiado(!isFiado));
+
   document.getElementById('btn-add-mov').addEventListener('click', addMov);
   document.getElementById('btn-ai-refresh').addEventListener('click', () => loadAIAdvice(true));
+}
+
+function setFiado(val) {
+  isFiado = val;
+  const toggle = document.getElementById('fiado-toggle');
+  const checkbox = document.getElementById('fiado-checkbox');
+  toggle.classList.toggle('active', val);
 }
 
 /* ════════════════════════════════════════
@@ -217,19 +266,30 @@ async function loadMovs() {
 }
 
 async function addMov() {
-  const concepto = v('mov-concepto').trim();
-  const valor    = parseFloat(v('mov-valor'));
-  const nota     = v('mov-nota').trim();
-  const fecha    = v('mov-fecha');
-  if (!concepto)         return toast('Escribe un concepto.', 'error');
+  const concepto  = v('mov-concepto').trim();
+  const valor     = parseFloat(v('mov-valor'));
+  const nota      = v('mov-nota').trim();
+  const fecha     = v('mov-fecha');
+  const medioPago = v('mov-medio-pago');
+  const cliente   = v('mov-cliente').trim();
+
+  if (!concepto)          return toast('Escribe un concepto.', 'error');
   if (!valor || valor<=0) return toast('Ingresa un valor mayor a cero.', 'error');
-  if (!fecha)            return toast('Selecciona una fecha.', 'error');
+  if (!fecha)             return toast('Selecciona una fecha.', 'error');
 
   const btn = document.getElementById('btn-add-mov');
   btn.disabled = true; btn.innerHTML = '<span>Guardando…</span>';
 
   const { data, error } = await db.from('movimientos').insert({
-    user_id:currentUser.id, tipo:activeType, concepto, valor, nota:nota||null, fecha
+    user_id: currentUser.id,
+    tipo: activeType,
+    concepto,
+    valor,
+    nota: nota || null,
+    fecha,
+    medio_pago: medioPago,
+    cliente: cliente || null,
+    es_fiado: activeType === 'ingreso' ? isFiado : false
   }).select().single();
 
   btn.disabled = false;
@@ -241,6 +301,8 @@ async function addMov() {
   document.getElementById('mov-concepto').value = '';
   document.getElementById('mov-valor').value    = '';
   document.getElementById('mov-nota').value     = '';
+  document.getElementById('mov-cliente').value  = '';
+  setFiado(false);
 
   allMovs.unshift(data);
   calcStats();
@@ -264,7 +326,7 @@ async function deleteMov(id) {
 ════════════════════════ */
 function calcStats() {
   const today = todayStr(), lun = weekStartStr(), mesI = monthStartStr();
-  let hoy = 0, hoyN = 0, semana = 0, semN = 0, mes = 0, mesN = 0, gastos = 0;
+  let hoy = 0, hoyN = 0, semana = 0, semN = 0, mes = 0, mesN = 0, gastos = 0, fiadoTotal = 0;
 
   allMovs.forEach(m => {
     const vv = Number(m.valor);
@@ -272,6 +334,7 @@ function calcStats() {
       if (m.fecha === today) { hoy    += vv; hoyN++; }
       if (m.fecha >= lun)    { semana += vv; semN++; }
       if (m.fecha >= mesI)   { mes    += vv; mesN++; }
+      if (m.es_fiado) fiadoTotal += vv;
     } else {
       if (m.fecha >= mesI) gastos += vv;
     }
@@ -285,6 +348,7 @@ function calcStats() {
   setText('stat-semana', fmt(semana));
   setText('stat-mes',    fmt(mes));
   setText('stat-gastos', fmt(gastos));
+  setText('stat-fiado',  fmt(fiadoTotal));
   setText('stat-total-count', String(allMovs.length));
   setText('bs-hoy-count',  `${hoyN} ingreso${hoyN !== 1 ? 's' : ''}`);
   setText('bs-sem-count',  `${semN} ingreso${semN !== 1 ? 's' : ''}`);
@@ -293,8 +357,7 @@ function calcStats() {
   const balEl = document.getElementById('stat-balance');
   if (balEl) { balEl.textContent = fmt(balance); balEl.className = 'ms-val ' + (balance >= 0 ? 'amber' : 'red'); }
 
-  const mEl = document.getElementById('stat-margen');
-  if (mEl)   { mEl.textContent = margen !== null ? `${margen}%` : '—'; }
+  setText('stat-margen', margen !== null ? `${margen}%` : '—');
 
   setBar('bar-hoy',    hoy    / maxVal * 100);
   setBar('bar-semana', semana / maxVal * 100);
@@ -304,11 +367,19 @@ function calcStats() {
 /* ════════════════════════════════════════
    RENDER LIST
 ════════════════════════ */
+const MEDIO_PAGO_LABELS = {
+  efectivo: 'Efectivo', transferencia: 'Transferencia', tarjeta: 'Tarjeta', otro: 'Otro'
+};
+
 function renderMovs() {
   const list = document.getElementById('mov-list');
-  const data = activeFilter === 'todos' ? allMovs : allMovs.filter(m => m.tipo === activeFilter);
+  let data;
+  if (activeFilter === 'todos')   data = allMovs;
+  else if (activeFilter === 'fiado') data = allMovs.filter(m => m.es_fiado);
+  else data = allMovs.filter(m => m.tipo === activeFilter);
+
   if (data.length === 0) {
-    const labels = { todos:'movimientos', ingreso:'ingresos', gasto:'egresos' };
+    const labels = { todos:'movimientos', ingreso:'ingresos', gasto:'egresos', fiado:'fiados' };
     list.innerHTML = `
       <div class="empty-st">
         <div class="empty-ico-wrap"><i data-lucide="inbox"></i></div>
@@ -318,20 +389,32 @@ function renderMovs() {
     lucide.createIcons();
     return;
   }
+
   list.innerHTML = data.map(m => {
     const fd = new Date(m.fecha + 'T12:00:00').toLocaleDateString('es-CO', { day:'numeric', month:'short', year:'numeric' });
     const sg = m.tipo === 'ingreso' ? '+' : '−';
     const ic = m.tipo === 'ingreso' ? 'arrow-down-left' : 'arrow-up-right';
+
+    const fiadoBadge = m.es_fiado
+      ? `<span class="badge badge-fiado"><i data-lucide="clock-3"></i>Fiado</span>` : '';
+    const pagoBadge = m.medio_pago
+      ? `<span class="badge badge-pago">${esc(MEDIO_PAGO_LABELS[m.medio_pago] || m.medio_pago)}</span>` : '';
+    const clienteTxt = m.cliente ? ` · ${esc(m.cliente)}` : '';
+
     return `<div class="mov-item">
       <div class="mov-pill ${m.tipo}"><i data-lucide="${ic}"></i></div>
       <div class="mov-info">
-        <div class="mov-concept">${esc(m.concepto)}</div>
-        <div class="mov-meta">${fd}${m.nota ? ' · ' + esc(m.nota) : ''}</div>
+        <div class="mov-concept-row">
+          <span class="mov-concept">${esc(m.concepto)}</span>
+          ${fiadoBadge}${pagoBadge}
+        </div>
+        <div class="mov-meta">${fd}${clienteTxt}${m.nota ? ' · ' + esc(m.nota) : ''}</div>
       </div>
       <div class="mov-amt ${m.tipo}">${sg} ${fmt(m.valor)}</div>
       <button class="mov-del" onclick="deleteMov('${m.id}')" title="Eliminar"><i data-lucide="x"></i></button>
     </div>`;
   }).join('');
+
   lucide.createIcons();
 }
 
@@ -340,15 +423,11 @@ function renderMovs() {
 ════════════════════════ */
 function buildChart() {
   const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
-  const gridColor = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
-  const tickColor = isDark ? 'rgba(255,255,255,0.3)'  : 'rgba(0,0,0,0.35)';
+  const gridColor = isDark ? 'rgba(180,150,255,0.08)' : 'rgba(45,28,127,0.06)';
+  const tickColor = isDark ? 'rgba(180,150,255,0.4)'  : 'rgba(45,28,127,0.45)';
 
-  // Build last-7-days labels
   const days = [];
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date(); d.setDate(d.getDate() - i);
-    days.push(d.toISOString().split('T')[0]);
-  }
+  for (let i = 6; i >= 0; i--) { const d = new Date(); d.setDate(d.getDate() - i); days.push(d.toISOString().split('T')[0]); }
   const labels = days.map(d => new Date(d + 'T12:00:00').toLocaleDateString('es-CO', { weekday:'short', day:'numeric' }));
 
   const inData  = days.map(d => allMovs.filter(m => m.tipo==='ingreso' && m.fecha===d).reduce((s,m)=>s+Number(m.valor),0));
@@ -356,83 +435,47 @@ function buildChart() {
 
   const ctx = document.getElementById('chart-weekly');
   if (!ctx) return;
-
   if (weeklyChart) { weeklyChart.destroy(); weeklyChart = null; }
 
-  const greenColor  = isDark ? 'rgba(110,231,183,.7)'   : 'rgba(5,150,105,.7)';
-  const greenFill   = isDark ? 'rgba(110,231,183,.08)'  : 'rgba(5,150,105,.06)';
-  const redColor    = isDark ? 'rgba(252,165,165,.65)'  : 'rgba(220,38,38,.65)';
-  const redFill     = isDark ? 'rgba(252,165,165,.06)'  : 'rgba(220,38,38,.05)';
+  const greenColor = isDark ? 'rgba(110,231,183,.75)' : 'rgba(5,150,105,.75)';
+  const greenFill  = isDark ? 'rgba(110,231,183,.10)' : 'rgba(5,150,105,.07)';
+  const redColor   = isDark ? 'rgba(251,113,133,.7)'  : 'rgba(220,38,38,.65)';
+  const redFill    = isDark ? 'rgba(251,113,133,.08)' : 'rgba(220,38,38,.05)';
 
   weeklyChart = new Chart(ctx, {
     type: 'bar',
-    data: {
-      labels,
-      datasets: [
-        {
-          label:'Ingresos', data:inData,
-          backgroundColor: greenFill,
-          borderColor: greenColor,
-          borderWidth: 1.5,
-          borderRadius: 6,
-          borderSkipped: false,
-        },
-        {
-          label:'Egresos', data:outData,
-          backgroundColor: redFill,
-          borderColor: redColor,
-          borderWidth: 1.5,
-          borderRadius: 6,
-          borderSkipped: false,
-        }
-      ]
-    },
+    data: { labels, datasets: [
+      { label:'Ingresos', data:inData, backgroundColor:greenFill, borderColor:greenColor, borderWidth:1.5, borderRadius:7, borderSkipped:false },
+      { label:'Egresos',  data:outData, backgroundColor:redFill,  borderColor:redColor,   borderWidth:1.5, borderRadius:7, borderSkipped:false }
+    ]},
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
+      responsive:true, maintainAspectRatio:false,
       plugins: {
-        legend: { display: false },
+        legend:{ display:false },
         tooltip: {
-          backgroundColor: isDark ? '#1a1a2a' : '#fff',
-          titleColor: isDark ? '#a78bfa' : '#6340e8',
-          bodyColor:  isDark ? '#e8e8f4' : '#0a0a14',
-          borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
-          borderWidth: 1,
-          cornerRadius: 10,
-          padding: 10,
-          titleFont: { family: "'Bricolage Grotesque',sans-serif", weight:'700', size:12 },
-          bodyFont:  { family: "'Plus Jakarta Sans',sans-serif", size:12 },
-          callbacks: {
-            label: ctx => ` ${ctx.dataset.label}: ${fmt(ctx.parsed.y)}`
-          }
+          backgroundColor: isDark ? '#211836' : '#fff',
+          titleColor: isDark ? '#c4b0ff' : '#5226c4',
+          bodyColor:  isDark ? '#f1ecff' : '#160f30',
+          borderColor: isDark ? 'rgba(180,150,255,0.18)' : 'rgba(45,28,127,0.12)',
+          borderWidth:1, cornerRadius:11, padding:11,
+          titleFont:{ family:"'Bricolage Grotesque',sans-serif", weight:'700', size:12 },
+          bodyFont:{ family:"'Plus Jakarta Sans',sans-serif", size:12 },
+          callbacks: { label: ctx => ` ${ctx.dataset.label}: ${fmt(ctx.parsed.y)}` }
         }
       },
       scales: {
-        x: {
-          grid:  { color: gridColor, drawBorder: false },
-          ticks: { color: tickColor, font: { family:"'Plus Jakarta Sans',sans-serif", size:10, weight:'600' } },
-          border: { display: false }
-        },
-        y: {
-          grid:  { color: gridColor, drawBorder: false },
-          ticks: {
-            color: tickColor,
-            font: { family:"'Plus Jakarta Sans',sans-serif", size:10 },
-            callback: v => v === 0 ? '0' : v >= 1000000 ? (v/1000000).toFixed(1)+'M' : v >= 1000 ? (v/1000).toFixed(0)+'k' : v
-          },
-          border: { display: false }
-        }
+        x: { grid:{ color:gridColor, drawBorder:false }, ticks:{ color:tickColor, font:{ family:"'Plus Jakarta Sans',sans-serif", size:10, weight:'600' } }, border:{ display:false } },
+        y: { grid:{ color:gridColor, drawBorder:false },
+             ticks:{ color:tickColor, font:{ family:"'Plus Jakarta Sans',sans-serif", size:10 },
+                     callback: v => v===0?'0': v>=1000000?(v/1000000).toFixed(1)+'M': v>=1000?(v/1000).toFixed(0)+'k': v },
+             border:{ display:false } }
       },
-      interaction: { mode: 'index', intersect: false },
-      animation:   { duration: 600, easing: 'easeInOutQuart' }
+      interaction:{ mode:'index', intersect:false },
+      animation:{ duration:600, easing:'easeInOutQuart' }
     }
   });
 }
-
-function rebuildChart() {
-  if (weeklyChart) { weeklyChart.destroy(); weeklyChart = null; }
-  buildChart();
-}
+function rebuildChart() { if (weeklyChart) { weeklyChart.destroy(); weeklyChart = null; } buildChart(); }
 
 /* ════════════════════════════════════════
    AI ADVICE — Gemini via Supabase Edge Function
@@ -441,16 +484,11 @@ async function loadAIAdvice(forceRefresh) {
   const bodyEl = document.getElementById('ai-body');
   const refreshBtn = document.getElementById('btn-ai-refresh');
 
-  // Revisar caché local (por usuario) si no se fuerza refresh
   if (!forceRefresh) {
     const cached = getAICache();
-    if (cached) {
-      renderAdvice(cached.advice);
-      return;
-    }
+    if (cached) { renderAdvice(cached.advice); return; }
   }
 
-  // Loading state
   bodyEl.innerHTML = `
     <div class="ai-loading">
       <span class="ai-dot"></span><span class="ai-dot"></span><span class="ai-dot"></span>
@@ -464,11 +502,7 @@ async function loadAIAdvice(forceRefresh) {
 
     const res = await fetch(AI_ADVICE_URL, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`,
-        'apikey': SUPABASE_KEY
-      }
+      headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${session.access_token}`, 'apikey': SUPABASE_KEY }
     });
 
     const data = await res.json();
@@ -506,42 +540,20 @@ function renderAdvice(text) {
   }</div>`;
 }
 
-// Frases introductorias/de cierre comunes que Gemini agrega aunque se le pida que no lo haga.
-// Si una "línea" empieza así (sin numeración propia), se descarta en vez de mostrarse como consejo.
 const AI_INTRO_PATTERNS = [
-  /^aqu[ií]\s+(tienes|est[aá]n|van)/i,
-  /^claro[,.]?/i,
-  /^estos?\s+son/i,
-  /^te\s+(comparto|dejo|doy)/i,
-  /^basad[oa]\s+en/i,
-  /^con\s+gusto/i,
-  /^perfecto[,.]?/i,
-  /^espero\s+que/i,
-  /^¡?listo[,!.]?/i,
+  /^aqu[ií]\s+(tienes|est[aá]n|van)/i, /^claro[,.]?/i, /^estos?\s+son/i,
+  /^te\s+(comparto|dejo|doy)/i, /^basad[oa]\s+en/i, /^con\s+gusto/i,
+  /^perfecto[,.]?/i, /^espero\s+que/i, /^¡?listo[,!.]?/i,
 ];
 
 function parseAdviceLines(text) {
-  // 1. Normalizar saltos de línea y dividir
   let raw = text.replace(/\r/g, '').split('\n').map(l => l.trim()).filter(Boolean);
-
-  // 2. Si Gemini metió todo en una sola línea (ej: "1. Algo 2. Otra cosa 3. Más"),
-  //    separar por el patrón "número + punto" en medio del texto.
   if (raw.length <= 1 && raw[0]) {
     const split = raw[0].split(/(?=\d+\.\s)/g).map(s => s.trim()).filter(Boolean);
     if (split.length > 1) raw = split;
   }
-
-  // 3. Quitar numeración/guiones al inicio de cada línea ("1. ", "1) ", "- ", "• ")
   const cleaned = raw.map(l => l.replace(/^(\d+[\.\)]\s*|[-•]\s*)/, '').trim());
-
-  // 4. Descartar líneas vacías tras limpiar, o que coincidan con frases de intro/cierre
-  const finalLines = cleaned.filter(l => {
-    if (!l) return false;
-    if (l.length < 8) return false; // demasiado corta para ser un consejo real
-    return !AI_INTRO_PATTERNS.some(rx => rx.test(l));
-  });
-
-  return finalLines;
+  return cleaned.filter(l => l && l.length >= 8 && !AI_INTRO_PATTERNS.some(rx => rx.test(l)));
 }
 
 function getAICache() {
@@ -549,48 +561,26 @@ function getAICache() {
     const raw = localStorage.getItem(AI_CACHE_KEY + '-' + (currentUser?.id || ''));
     if (!raw) return null;
     const parsed = JSON.parse(raw);
-    const ageHours = (Date.now() - parsed.timestamp) / 36e5;
-    if (ageHours > AI_CACHE_HOURS) return null;
+    if ((Date.now() - parsed.timestamp) / 36e5 > AI_CACHE_HOURS) return null;
     return parsed;
   } catch { return null; }
 }
-
 function setAICache(advice) {
-  try {
-    localStorage.setItem(
-      AI_CACHE_KEY + '-' + (currentUser?.id || ''),
-      JSON.stringify({ advice, timestamp: Date.now() })
-    );
-  } catch {}
+  try { localStorage.setItem(AI_CACHE_KEY + '-' + (currentUser?.id || ''), JSON.stringify({ advice, timestamp: Date.now() })); } catch {}
 }
 
 /* ════════════════════════════════════════
    HELPERS
 ════════════════════════ */
 function todayStr()     { return new Date().toISOString().split('T')[0]; }
-function weekStartStr() {
-  const now = new Date(), day = now.getDay();
-  const d   = new Date(now);
-  d.setDate(now.getDate() + (day === 0 ? -6 : 1 - day));
-  return d.toISOString().split('T')[0];
-}
-function monthStartStr() {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`;
-}
-function fmt(n) {
-  return new Intl.NumberFormat('es-CO', {
-    style:'currency', currency:'COP',
-    minimumFractionDigits:0, maximumFractionDigits:0
-  }).format(n);
-}
-function v(id)           { return (document.getElementById(id)?.value || ''); }
-function setText(id,txt) { const el = document.getElementById(id); if (el) el.textContent = txt; }
-function setBar(id,pct)  { const el = document.getElementById(id); if (el) el.style.width = Math.min(100,pct)+'%'; }
-function showErr(el,msg) {
-  el.textContent = msg; el.classList.remove('hidden');
-  setTimeout(() => el.classList.add('hidden'), 4000);
-}
+function weekStartStr() { const now=new Date(), day=now.getDay(); const d=new Date(now); d.setDate(now.getDate()+(day===0?-6:1-day)); return d.toISOString().split('T')[0]; }
+function monthStartStr(){ const now=new Date(); return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`; }
+function fmt(n) { return new Intl.NumberFormat('es-CO',{style:'currency',currency:'COP',minimumFractionDigits:0,maximumFractionDigits:0}).format(n); }
+function v(id) { return (document.getElementById(id)?.value || ''); }
+function setText(id,txt) { const el=document.getElementById(id); if (el) el.textContent = txt; }
+function setBar(id,pct)  { const el=document.getElementById(id); if (el) el.style.width = Math.min(100,pct)+'%'; }
+function showErr(el,msg) { el.textContent = msg; el.classList.remove('hidden'); setTimeout(()=>el.classList.add('hidden'),4000); }
+
 let _toastT;
 function toast(msg, type='') {
   const t = document.getElementById('toast');
@@ -598,16 +588,8 @@ function toast(msg, type='') {
   t.className = `toast ${type} show`;
   t.classList.remove('hidden');
   clearTimeout(_toastT);
-  _toastT = setTimeout(() => {
-    t.classList.remove('show');
-    setTimeout(() => t.classList.add('hidden'), 300);
-  }, 2800);
+  _toastT = setTimeout(()=>{ t.classList.remove('show'); setTimeout(()=>t.classList.add('hidden'),300); }, 2800);
   const ico = t.querySelector('.t-ico');
-  if (ico) {
-    ico.setAttribute('data-lucide', type === 'error' ? 'alert-circle' : 'check-circle');
-    lucide.createIcons();
-  }
+  if (ico) { ico.setAttribute('data-lucide', type==='error'?'alert-circle':'check-circle'); lucide.createIcons(); }
 }
-function esc(s) {
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }

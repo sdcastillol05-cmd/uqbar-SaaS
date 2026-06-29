@@ -1,16 +1,16 @@
 <!DOCTYPE html>
 <html lang="es" data-theme="dark">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Uqbar</title>
-  <link rel="stylesheet" href="style.css"/>
-  <link rel="preconnect" href="https://fonts.googleapis.com"/>
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&display=swap" rel="stylesheet"/>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://unpkg.com/lucide@latest"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Uqbar</title>
+<link rel="stylesheet" href="style.css"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
 
@@ -20,6 +20,7 @@
     <div class="bg-orb bg-orb-1"></div>
     <div class="bg-orb bg-orb-2"></div>
     <div class="bg-orb bg-orb-3"></div>
+    <div class="bg-mesh"></div>
     <div class="bg-noise"></div>
   </div>
 
@@ -111,6 +112,13 @@
 <!-- ══════ DASHBOARD ══════ -->
 <div id="screen-dashboard" class="screen hidden">
 
+  <!-- ambient bg for whole dashboard -->
+  <div class="dash-bg">
+    <div class="dash-orb dash-orb-1"></div>
+    <div class="dash-orb dash-orb-2"></div>
+    <div class="dash-mesh"></div>
+  </div>
+
   <!-- NAV -->
   <nav class="nav">
     <div class="nav-l">
@@ -119,7 +127,15 @@
         <span class="nav-name">Uqbar</span>
       </div>
       <div class="nav-divider"></div>
-      <span class="nav-biz" id="topbar-biz-name">—</span>
+
+      <!-- editable business name -->
+      <div class="biz-edit-wrap" id="biz-edit-wrap">
+        <span class="nav-biz" id="topbar-biz-name">—</span>
+        <input type="text" class="biz-edit-input hidden" id="biz-edit-input" maxlength="40"/>
+        <button class="biz-edit-btn" id="biz-edit-btn" title="Editar nombre del negocio">
+          <i data-lucide="pencil"></i>
+        </button>
+      </div>
     </div>
     <div class="nav-r">
       <span class="nav-date" id="topbar-date"></span>
@@ -138,7 +154,6 @@
     <div class="hb-ambient"><div class="hb-orb"></div></div>
     <div class="hb-inner">
 
-      <!-- Greeting -->
       <div class="hb-top">
         <div class="hb-greeting">
           <span id="greeting-time" class="gt-time">Buenos días</span>
@@ -150,7 +165,6 @@
         </div>
       </div>
 
-      <!-- 3 BIG STATS -->
       <div class="big-stats">
         <div class="bs-card bs-today">
           <div class="bs-eyebrow"><i data-lucide="sun-medium"></i> Hoy</div>
@@ -172,7 +186,6 @@
         </div>
       </div>
 
-      <!-- MINI STATS ROW -->
       <div class="mini-row">
         <div class="mini-stat">
           <div class="ms-icon red"><i data-lucide="trending-down"></i></div>
@@ -195,6 +208,13 @@
             <span class="ms-val green" id="stat-total-count">0</span>
           </div>
         </div>
+        <div class="mini-stat">
+          <div class="ms-icon red2"><i data-lucide="circle-dollar-sign"></i></div>
+          <div class="ms-body">
+            <span class="ms-label">Por cobrar (fiado)</span>
+            <span class="ms-val red2" id="stat-fiado">$0</span>
+          </div>
+        </div>
         <div class="mini-stat mini-stat-wide">
           <div class="ms-icon violet"><i data-lucide="percent"></i></div>
           <div class="ms-body">
@@ -206,16 +226,17 @@
     </div>
   </section>
 
-  <!-- AI ADVICE BAND -->
+  <!-- AI BAND — large, full width, hero treatment -->
   <section class="ai-band">
     <div class="ai-card" id="ai-card">
+      <div class="ai-glow-orb"></div>
       <div class="ai-card-head">
         <div class="ai-icon-wrap">
           <i data-lucide="sparkles" class="ai-icon"></i>
         </div>
         <div class="ai-title-wrap">
-          <span class="ai-title">Consejos para tu negocio</span>
-          <span class="ai-sub">Basado en tus últimos 30 días</span>
+          <span class="ai-title">Asistente de negocio</span>
+          <span class="ai-sub">Consejos basados en tus últimos 30 días</span>
         </div>
         <button class="btn-ai-refresh" id="btn-ai-refresh" title="Actualizar consejos">
           <i data-lucide="refresh-cw"></i>
@@ -233,7 +254,6 @@
   <!-- MAIN GRID -->
   <div class="main-grid">
 
-    <!-- LEFT: registro + chart -->
     <div class="col-left">
 
       <!-- REGISTRO CARD -->
@@ -261,6 +281,7 @@
               <input type="text" id="mov-concepto" placeholder="Ej: Servicio de diseño"/>
             </div>
           </div>
+
           <div class="field-row">
             <div class="field fg-grow">
               <label>Nota <span class="opt">opcional</span></label>
@@ -277,6 +298,39 @@
               </div>
             </div>
           </div>
+
+          <div class="field-row">
+            <div class="field fg-grow">
+              <label>Medio de pago</label>
+              <div class="fi-wrap">
+                <i data-lucide="credit-card" class="fi-ico"></i>
+                <select id="mov-medio-pago">
+                  <option value="efectivo">Efectivo</option>
+                  <option value="transferencia">Transferencia</option>
+                  <option value="tarjeta">Tarjeta</option>
+                  <option value="otro">Otro</option>
+                </select>
+              </div>
+            </div>
+            <div class="field fg-cliente">
+              <label>Cliente <span class="opt">opcional</span></label>
+              <div class="fi-wrap">
+                <i data-lucide="user" class="fi-ico"></i>
+                <input type="text" id="mov-cliente" placeholder="Nombre"/>
+              </div>
+            </div>
+          </div>
+
+          <div class="fiado-row" id="fiado-row">
+            <button type="button" class="fiado-toggle" id="fiado-toggle">
+              <span class="fiado-checkbox" id="fiado-checkbox"><i data-lucide="check"></i></span>
+              <span class="fiado-text">
+                <i data-lucide="clock-3" class="fiado-ico"></i>
+                Es fiado / queda debiendo
+              </span>
+            </button>
+          </div>
+
           <div class="amount-save-row">
             <div class="field fg-amount">
               <label>Valor</label>
@@ -310,7 +364,6 @@
       </div>
     </div>
 
-    <!-- RIGHT: historial -->
     <div class="col-right">
       <div class="card card-historial">
         <div class="card-head-row">
@@ -322,6 +375,7 @@
             <button class="fseg-btn active" data-filter="todos">Todos</button>
             <button class="fseg-btn" data-filter="ingreso">Ingresos</button>
             <button class="fseg-btn" data-filter="gasto">Egresos</button>
+            <button class="fseg-btn" data-filter="fiado">Fiado</button>
           </div>
         </div>
         <div class="hist-scroll" id="mov-list">
@@ -343,7 +397,6 @@
   </footer>
 </div>
 
-<!-- TOAST -->
 <div id="toast" class="toast hidden">
   <i data-lucide="check-circle" class="t-ico"></i>
   <span id="toast-msg"></span>
