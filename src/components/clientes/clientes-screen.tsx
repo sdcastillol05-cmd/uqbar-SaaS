@@ -29,11 +29,13 @@ const TODAY = new Date().toISOString().split("T")[0];
 function fmtFecha(iso: string) {
   return new Date(iso).toLocaleDateString("es-CO", {
     day: "numeric", month: "short", year: "numeric",
+    timeZone: "America/Bogota",
   });
 }
 function fmtFechaHora(iso: string) {
   return new Date(iso).toLocaleString("es-CO", {
     day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
+    timeZone: "America/Bogota",
   });
 }
 
@@ -645,8 +647,12 @@ function FormNuevoRecordatorio({
 
   async function handle() {
     if (!motivo.trim() || !fecha || !hora) return;
-    // Convertir fecha + hora local (Colombia UTC-5) a ISO UTC
-    const localStr = `${fecha}T${hora}:00`;
+    // Colombia is UTC-5. We append the offset explicitly so that
+    // `new Date(...)` interprets the user's local time correctly
+    // regardless of where the Next.js server is running (Vercel = UTC).
+    // "2026-07-12T12:01:00-05:00" → stored as "2026-07-12T17:01:00.000Z"
+    // so the cron (which runs in UTC) fires at exactly the right moment.
+    const localStr = `${fecha}T${hora}:00-05:00`;
     const fechaUTC = new Date(localStr).toISOString();
     setSaving(true);
     await onSubmit({ motivo: motivo.trim(), fecha_envio: fechaUTC });

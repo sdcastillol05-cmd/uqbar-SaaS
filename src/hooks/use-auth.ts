@@ -38,10 +38,7 @@ export function useAuth() {
   }, [loadPerfil]);
 
   const signIn = useCallback(async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
     return { error };
   }, []);
 
@@ -49,7 +46,6 @@ export function useAuth() {
     async (email: string, password: string, nombreNegocio: string) => {
       const { data, error } = await supabase.auth.signUp({ email, password });
       if (error) return { error };
-
       if (data.user) {
         await supabase.from("perfiles").insert({
           user_id: data.user.id,
@@ -73,9 +69,15 @@ export function useAuth() {
         .from("perfiles")
         .update({ nombre_negocio: nuevoNombre })
         .eq("user_id", user.id);
+
+      // KEY FIX: update local state immediately so page.tsx re-renders
+      // with the new name without waiting for a full page reload.
       if (!error) {
-        setPerfil((p) => (p ? { ...p, nombre_negocio: nuevoNombre } : p));
+        setPerfil((prev) =>
+          prev ? { ...prev, nombre_negocio: nuevoNombre } : prev
+        );
       }
+
       return { error };
     },
     [user]
