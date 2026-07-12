@@ -253,6 +253,7 @@ export function ClientesScreen({
           >
             <FormNuevoRecordatorio
               clienteNombre={selected.nombre}
+              nombreNegocio={nombreNegocio}
               onSubmit={async (data) => {
                 const { error } = await addRecordatorio({
                   cliente_id: selected.id,
@@ -628,10 +629,12 @@ function FormNuevoCliente({
 // ════════════════════════════════════════
 function FormNuevoRecordatorio({
   clienteNombre,
+  nombreNegocio,
   onSubmit,
   onCancel,
 }: {
   clienteNombre: string;
+  nombreNegocio: string;
   onSubmit: (data: { motivo: string; fecha_envio: string }) => Promise<void>;
   onCancel: () => void;
 }) {
@@ -650,9 +653,9 @@ function FormNuevoRecordatorio({
     setSaving(false);
   }
 
-  // Preview del mensaje que recibirá el cliente
+  // Preview del mensaje que recibirá el cliente — usa el nombre real del negocio
   const preview = motivo.trim()
-    ? `Hola ${clienteNombre}, te escribe [tu negocio].\n\nTe recordamos que tienes pendiente: ${motivo}.\n\nEste es un mensaje automático. Para confirmar o reagendar, comunícate directamente con nosotros. ¡Te esperamos pronto!`
+    ? `Hola ${clienteNombre}, te escribe ${nombreNegocio}.\n\nTe recordamos que tienes pendiente: ${motivo}.\n\nEste es un mensaje automático. Para confirmar o reagendar, comunícate directamente con nosotros. ¡Te esperamos pronto!`
     : "";
 
   return (
