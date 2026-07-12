@@ -1,11 +1,23 @@
 "use client";
 
+import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { LoginScreen } from "@/components/auth/login-screen";
 import { DashboardScreen } from "@/components/dashboard/dashboard-screen";
+import { ClientesScreen } from "@/components/clientes/clientes-screen";
+import { Navbar } from "@/components/dashboard/navbar";
+import { useTheme } from "@/hooks/use-theme";
+import { useToast } from "@/hooks/use-toast";
+import { LayoutDashboard, Users } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+type Tab = "dashboard" | "clientes";
 
 export default function Home() {
-  const { user, loading } = useAuth();
+  const { user, perfil, loading, signOut, updateNombreNegocio } = useAuth();
+  const { theme, toggleTheme } = useTheme();
+  const { showToast, ToastPortal } = useToast();
+  const [tab, setTab] = useState<Tab>("dashboard");
 
   if (loading) {
     return (
@@ -23,5 +35,62 @@ export default function Home() {
     );
   }
 
-  return user ? <DashboardScreen /> : <LoginScreen />;
+  if (!user) return <LoginScreen />;
+
+  const businessName = perfil?.nombre_negocio || "Mi negocio";
+
+  async function handleRename(newName: string) {
+    const { error } = await updateNombreNegocio(newName);
+    showToast(
+      error ? "No se pudo guardar el nombre." : "Nombre actualizado",
+      error ? "error" : "success"
+    );
+  }
+
+  return (
+    <div className="min-h-screen flex flex-col">
+      <Navbar
+        businessName={businessName}
+        theme={theme}
+        onToggleTheme={toggleTheme}
+        onLogout={signOut}
+        onRenameBusiness={handleRename}
+      />
+
+      {/* Tab navigation */}
+      <div className="border-b bg-background/85 backdrop-blur-xl sticky top-[56px] z-40">
+        <div className="max-w-[1320px] mx-auto px-8 flex gap-0">
+          {([
+            { key: "dashboard", label: "Resumen",  icon: LayoutDashboard },
+            { key: "clientes",  label: "Clientes", icon: Users },
+          ] as { key: Tab; label: string; icon: React.ElementType }[]).map(({ key, label, icon: Icon }) => (
+            <button
+              key={key}
+              onClick={() => setTab(key)}
+              className={cn(
+                "flex items-center gap-2 px-4 py-3.5 text-sm font-semibold border-b-2 transition-colors",
+                tab === key
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <Icon className="size-4" />
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {tab === "dashboard" && <DashboardScreen />}
+      {tab === "clientes"  && (
+        <ClientesScreen
+          userId={user.id}
+          nombreNegocio={businessName}
+          showToast={showToast}
+        />
+      )}
+
+      <ToastPortal />
+    </div>
+  );
 }
