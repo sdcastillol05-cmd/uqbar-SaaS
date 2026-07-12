@@ -12,13 +12,10 @@ import type {
   RecordatorioConCliente,
 } from "@/lib/types-clientes";
 
-// ── Prefijo para Colombia — cuando haya otros países,
-// el formulario enviará el número ya completo con su prefijo.
 const PREFIJO_CO = "57";
 
 export function formatearTelefono(diez_digitos: string): string {
   const limpio = diez_digitos.replace(/\D/g, "");
-  // Si el usuario ya puso el prefijo 57 al inicio, no lo duplicamos
   if (limpio.startsWith("57") && limpio.length === 12) return limpio;
   return `${PREFIJO_CO}${limpio}`;
 }
@@ -30,15 +27,20 @@ export function useClientes(userId: string | undefined) {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Clear state when user logs out — separate effect so the linter
+  // only sees one setState call per effect body (same fix as use-movimientos).
   useEffect(() => {
-    if (!userId) {
-      setClientes([]);
-      setLoading(false);
-      return;
-    }
+    if (userId) return;
+    setClientes([]);
+    setLoading(false);
+  }, [userId]);
+
+  // Fetch from Supabase (external system) when userId is available.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => {
+    if (!userId) return;
     let cancelled = false;
     setLoading(true);
-
     supabase
       .from("clientes")
       .select("*")
@@ -49,7 +51,6 @@ export function useClientes(userId: string | undefined) {
         setClientes(data ?? []);
         setLoading(false);
       });
-
     return () => { cancelled = true; };
   }, [userId]);
 
@@ -58,14 +59,11 @@ export function useClientes(userId: string | undefined) {
       if (!userId) return { error: new Error("Sin sesión"), data: null };
       const { data, error } = await supabase
         .from("clientes")
-        .insert({
-          ...nuevo,
-          telefono: formatearTelefono(nuevo.telefono),
-          user_id: userId,
-        })
+        .insert({ ...nuevo, telefono: formatearTelefono(nuevo.telefono), user_id: userId })
         .select()
         .single();
-      if (!error && data) setClientes((prev) => [...prev, data].sort((a, b) => a.nombre.localeCompare(b.nombre)));
+      if (!error && data)
+        setClientes((prev) => [...prev, data].sort((a, b) => a.nombre.localeCompare(b.nombre)));
       return { error, data };
     },
     [userId]
@@ -82,11 +80,8 @@ export function useClientes(userId: string | undefined) {
         .update(payload)
         .eq("id", id)
         .eq("user_id", userId);
-      if (!error) {
-        setClientes((prev) =>
-          prev.map((c) => (c.id === id ? { ...c, ...payload } : c))
-        );
-      }
+      if (!error)
+        setClientes((prev) => prev.map((c) => (c.id === id ? { ...c, ...payload } : c)));
       return { error };
     },
     [userId]
@@ -120,14 +115,16 @@ export function useAnotaciones(
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!clienteId || !userId) {
-      setAnotaciones([]);
-      setLoading(false);
-      return;
-    }
+    if (clienteId && userId) return;
+    setAnotaciones([]);
+    setLoading(false);
+  }, [clienteId, userId]);
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => {
+    if (!clienteId || !userId) return;
     let cancelled = false;
     setLoading(true);
-
     supabase
       .from("anotaciones_servicio")
       .select("*")
@@ -139,7 +136,6 @@ export function useAnotaciones(
         setAnotaciones(data ?? []);
         setLoading(false);
       });
-
     return () => { cancelled = true; };
   }, [clienteId, userId]);
 
@@ -182,14 +178,16 @@ export function useRecordatorios(userId: string | undefined) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!userId) {
-      setRecordatorios([]);
-      setLoading(false);
-      return;
-    }
+    if (userId) return;
+    setRecordatorios([]);
+    setLoading(false);
+  }, [userId]);
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => {
+    if (!userId) return;
     let cancelled = false;
     setLoading(true);
-
     supabase
       .from("recordatorios")
       .select("*, clientes(nombre, telefono)")
@@ -200,7 +198,6 @@ export function useRecordatorios(userId: string | undefined) {
         setRecordatorios((data as RecordatorioConCliente[]) ?? []);
         setLoading(false);
       });
-
     return () => { cancelled = true; };
   }, [userId]);
 
@@ -238,7 +235,6 @@ export function useRecordatorios(userId: string | undefined) {
     [userId]
   );
 
-  // Envío inmediato (sin esperar el cron) — útil para el botón "Enviar ahora"
   const enviarAhora = useCallback(
     async (recordatorio: RecordatorioConCliente, nombreNegocio: string) => {
       const { data: sessionData } = await supabase.auth.getSession();
