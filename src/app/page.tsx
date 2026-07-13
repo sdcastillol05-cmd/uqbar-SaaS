@@ -5,13 +5,14 @@ import { useAuth } from "@/hooks/use-auth";
 import { LoginScreen } from "@/components/auth/login-screen";
 import { DashboardScreen } from "@/components/dashboard/dashboard-screen";
 import { ClientesScreen } from "@/components/clientes/clientes-screen";
+import { ReseñasScreen } from "@/components/reseñas/reseñas-screen";
 import { Navbar } from "@/components/dashboard/navbar";
 import { useTheme } from "@/hooks/use-theme";
 import { useToast } from "@/hooks/use-toast";
-import { LayoutDashboard, Users } from "lucide-react";
+import { LayoutDashboard, Users, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type Tab = "dashboard" | "clientes";
+type Tab = "dashboard" | "clientes" | "reseñas";
 
 export default function Home() {
   const { user, perfil, loading, signOut, updateNombreNegocio } = useAuth();
@@ -34,10 +35,6 @@ export default function Home() {
 
   if (!user) return <LoginScreen />;
 
-  // Single source of truth for the business name — both DashboardScreen
-  // and ClientesScreen receive it as a prop so edits in the Navbar
-  // propagate instantly to every tab without each screen having its own
-  // stale copy from a separate useAuth() call.
   const businessName = perfil?.nombre_negocio || "Mi negocio";
 
   async function handleRename(newName: string) {
@@ -51,11 +48,11 @@ export default function Home() {
   const TABS = [
     { key: "dashboard" as Tab, label: "Resumen",  icon: LayoutDashboard },
     { key: "clientes"  as Tab, label: "Clientes", icon: Users },
+    { key: "reseñas"   as Tab, label: "Reseñas",  icon: Star },
   ];
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Single navbar for the whole app */}
       <Navbar
         businessName={businessName}
         theme={theme}
@@ -64,7 +61,6 @@ export default function Home() {
         onRenameBusiness={handleRename}
       />
 
-      {/* Tab bar — sits below the navbar */}
       <div className="border-b bg-background/85 backdrop-blur-xl sticky top-[56px] z-40">
         <div className="max-w-[1320px] mx-auto px-8 flex">
           {TABS.map(({ key, label, icon: Icon }) => (
@@ -74,7 +70,8 @@ export default function Home() {
                 tab === key
                   ? "border-primary text-primary"
                   : "border-transparent text-muted-foreground hover:text-foreground"
-              )}>
+              )}
+            >
               <Icon className="size-4" />
               {label}
             </button>
@@ -82,10 +79,12 @@ export default function Home() {
         </div>
       </div>
 
-      {/* DashboardScreen no longer has its own Navbar — receives businessName as prop */}
       {tab === "dashboard" && <DashboardScreen businessName={businessName} />}
       {tab === "clientes"  && (
         <ClientesScreen userId={user.id} nombreNegocio={businessName} showToast={showToast} />
+      )}
+      {tab === "reseñas" && (
+        <ReseñasScreen userId={user.id} nombreNegocio={businessName} showToast={showToast} />
       )}
 
       <ToastPortal />
