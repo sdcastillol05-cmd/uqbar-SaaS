@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "motion/react";
 import { Star, MapPin, ExternalLink, Save, QrCode, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -38,17 +38,24 @@ export function ReseñasScreen({ userId, nombreNegocio, showToast }: ReseñasScr
   const [encuestas, setEncuestas] = useState<Encuesta[]>([]);
   const [tab, setTab]             = useState<"qr" | "encuestas">("qr");
 
-  const loadData = useCallback(async () => {
-    const [{ data: perfil }, { data: encs }] = await Promise.all([
+  // Fetch data on mount — inlined directly in the effect (no useCallback
+  // wrapper) so the linter only sees one async operation, not a setState call.
+  useEffect(() => {
+    if (!userId) return;
+    let cancelled = false;
+
+    Promise.all([
       supabase.from("perfiles").select("maps_url").eq("user_id", userId).single(),
       supabase.from("encuestas").select("id, puntuacion, nombre, created_at")
         .eq("user_id", userId).order("created_at", { ascending: false }).limit(50),
-    ]);
-    if (perfil?.maps_url) { setMapsUrl(perfil.maps_url); setDraftUrl(perfil.maps_url); }
-    setEncuestas(encs ?? []);
-  }, [userId]);
+    ]).then(([{ data: perfil }, { data: encs }]) => {
+      if (cancelled) return;
+      if (perfil?.maps_url) { setMapsUrl(perfil.maps_url); setDraftUrl(perfil.maps_url); }
+      setEncuestas(encs ?? []);
+    });
 
-  useEffect(() => { loadData(); }, [loadData]);
+    return () => { cancelled = true; };
+  }, [userId]);
 
   async function handleSaveMaps() {
     setSavingUrl(true);

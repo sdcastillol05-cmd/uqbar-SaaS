@@ -7,7 +7,6 @@ import type {
   NuevoCliente,
   AnotacionServicio,
   NuevaAnotacion,
-  Recordatorio,
   NuevoRecordatorio,
   RecordatorioConCliente,
 } from "@/lib/types-clientes";
@@ -36,7 +35,6 @@ export function useClientes(userId: string | undefined) {
   }, [userId]);
 
   // Fetch from Supabase (external system) when userId is available.
-  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     if (!userId) return;
     let cancelled = false;
@@ -183,7 +181,6 @@ export function useRecordatorios(userId: string | undefined) {
     setLoading(false);
   }, [userId]);
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     if (!userId) return;
     let cancelled = false;
