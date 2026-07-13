@@ -118,7 +118,6 @@ export function useAnotaciones(
     setLoading(false);
   }, [clienteId, userId]);
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     if (!clienteId || !userId) return;
     let cancelled = false;

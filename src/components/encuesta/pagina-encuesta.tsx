@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "motion/react";
 import { Star, Phone, User, ArrowRight, CheckCircle2, Sparkles } from "lucide-react";
@@ -35,13 +35,10 @@ export function PaginaEncuesta({ negocioId }: PaginaEncuestaProps) {
   const [telefono, setTelefono]   = useState("");
   const [loading, setLoading]     = useState(false);
   const [mapsUrl, setMapsUrl]     = useState<string | null>(null);
-  const [negocioValido, setNegocioValido] = useState<boolean | null>(null);
 
-  // Verificar que el negocio existe al cargar
-  useEffect(() => {
-    if (!negocioId) { setNegocioValido(false); return; }
-    setNegocioValido(true);
-  }, [negocioId]);
+  // Derived directly from the prop — no useEffect needed since this
+  // is just a boolean check on a prop value, not an external system sync.
+  const negocioValido = Boolean(negocioId);
 
   async function handleSubmit() {
     setLoading(true);
