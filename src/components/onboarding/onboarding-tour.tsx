@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { X, ArrowRight, Sparkles, Users, QrCode } from "lucide-react";
+import { X, ArrowRight, Sparkles, Users, QrCode, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase";
+import { cn } from "@/lib/utils";
 
 interface OnboardingProps {
   userId: string;
@@ -12,84 +13,54 @@ interface OnboardingProps {
 }
 
 interface Step {
-  id: string;
   icon: React.ElementType;
   color: string;
   title: string;
   text: string;
-  // selector CSS del elemento a resaltar
-  target: string;
-  // posición del tooltip relativa al target
-  placement: "top" | "bottom" | "left" | "right";
+  hint: string; // texto pequeño que indica dónde mirar
 }
 
 const STEPS: Step[] = [
   {
-    id: "ia",
+    icon: TrendingUp,
+    color: "#7546E8",
+    title: "Registra tus movimientos",
+    text: "Toca el botón "Nuevo movimiento" en la parte inferior de la pantalla para registrar ingresos y gastos.",
+    hint: "↓ Mira al final de esta pantalla",
+  },
+  {
     icon: Sparkles,
     color: "#9163ff",
-    title: "Tu asesor de IA",
-    text: "Analiza tu negocio y te da consejos personalizados. Toca el botón ↻ para actualizarlos.",
-    target: "[data-onboarding='ai-panel']",
-    placement: "left",
+    title: "Tu asesor con IA",
+    text: "El panel derecho analiza tu negocio y te da consejos personalizados. Toca ↻ para actualizarlos.",
+    hint: "→ Panel derecho de esta pantalla",
   },
   {
-    id: "clientes",
     icon: Users,
     color: "#00BBFF",
-    title: "Clientes y recordatorios",
-    text: "Guarda tus clientes y programa mensajes automáticos por WhatsApp para que vuelvan.",
-    target: "[data-onboarding='tab-clientes']",
-    placement: "bottom",
+    title: "Clientes y WhatsApp",
+    text: "En la tab "Clientes" guardas tus clientes y programas recordatorios automáticos por WhatsApp.",
+    hint: "↑ Tab "Clientes" en la barra superior",
   },
   {
-    id: "resenas",
     icon: QrCode,
     color: "#00E0A4",
     title: "Tu QR de reseñas",
-    text: "Genera un código QR para que tus clientes califiquen el servicio y te dejen reseñas en Google.",
-    target: "[data-onboarding='tab-resenas']",
-    placement: "bottom",
+    text: "En "Reseñas" generas un código QR para que tus clientes califiquen el servicio y te dejen reseñas en Google.",
+    hint: "↑ Tab "Reseñas" en la barra superior",
   },
 ];
 
-function getTargetRect(selector: string): DOMRect | null {
-  const el = document.querySelector(selector);
-  if (!el) return null;
-  return el.getBoundingClientRect();
-}
-
 export function OnboardingTour({ userId, onComplete }: OnboardingProps) {
   const [step, setStep] = useState(0);
-  const [rect, setRect] = useState<DOMRect | null>(null);
-  const [visible, setVisible] = useState(false);
+  const [exiting, setExiting] = useState(false);
 
-  const currentStep = STEPS[step];
-
-  // Measure target element position
-  useEffect(() => {
-    const measure = () => {
-      const r = getTargetRect(currentStep.target);
-      setRect(r);
-    };
-    // Small delay to let the DOM settle
-    const t = setTimeout(() => {
-      measure();
-      setVisible(true);
-    }, 300);
-    return () => clearTimeout(t);
-  }, [step, currentStep.target]);
-
-  // Re-measure on resize
-  useEffect(() => {
-    window.addEventListener("resize", () => {
-      setRect(getTargetRect(currentStep.target));
-    });
-    return () => window.removeEventListener("resize", () => {});
-  }, [currentStep.target]);
+  const current = STEPS[step];
+  const isLast  = step === STEPS.length - 1;
+  const Icon    = current.icon;
 
   async function finish() {
-    setVisible(false);
+    setExiting(true);
     await supabase
       .from("perfiles")
       .update({ onboarding_completado: true })
@@ -98,177 +69,107 @@ export function OnboardingTour({ userId, onComplete }: OnboardingProps) {
   }
 
   function next() {
-    setVisible(false);
-    setTimeout(() => {
-      if (step < STEPS.length - 1) {
-        setStep((s) => s + 1);
-      } else {
-        finish();
-      }
-    }, 200);
+    if (isLast) { finish(); return; }
+    setStep((s) => s + 1);
   }
-
-  const Icon = currentStep.icon;
-  const isLast = step === STEPS.length - 1;
-
-  // Tooltip position relative to target
-  function tooltipStyle(): React.CSSProperties {
-    if (!rect) return { top: "50%", left: "50%", transform: "translate(-50%, -50%)" };
-
-    const GAP = 16;
-    const scrollY = window.scrollY;
-
-    switch (currentStep.placement) {
-      case "bottom":
-        return {
-          top:  rect.bottom + scrollY + GAP,
-          left: rect.left + rect.width / 2,
-          transform: "translateX(-50%)",
-        };
-      case "top":
-        return {
-          top:  rect.top + scrollY - GAP,
-          left: rect.left + rect.width / 2,
-          transform: "translate(-50%, -100%)",
-        };
-      case "left":
-        return {
-          top:  rect.top + scrollY + rect.height / 2,
-          left: rect.left - GAP,
-          transform: "translate(-100%, -50%)",
-        };
-      case "right":
-        return {
-          top:  rect.top + scrollY + rect.height / 2,
-          left: rect.right + GAP,
-          transform: "translateY(-50%)",
-        };
-    }
-  }
-
-  // Spotlight padding around the target
-  const PAD = 8;
-  const spotlightStyle = rect
-    ? {
-        top:    rect.top + window.scrollY - PAD,
-        left:   rect.left - PAD,
-        width:  rect.width  + PAD * 2,
-        height: rect.height + PAD * 2,
-      }
-    : null;
 
   return (
     <AnimatePresence>
-      {visible && (
+      {!exiting && (
         <>
-          {/* Dark overlay with hole */}
+          {/* Overlay — semi-transparent, doesn't block content reading */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[80] pointer-events-none"
-            style={{
-              background: "rgba(0,0,0,0.55)",
-              WebkitMaskImage: spotlightStyle
-                ? `radial-gradient(ellipse ${spotlightStyle.width + 20}px ${spotlightStyle.height + 20}px at ${spotlightStyle.left + spotlightStyle.width / 2}px ${spotlightStyle.top + spotlightStyle.height / 2}px, transparent 60%, black 75%)`
-                : "none",
-              maskImage: spotlightStyle
-                ? `radial-gradient(ellipse ${spotlightStyle.width + 20}px ${spotlightStyle.height + 20}px at ${spotlightStyle.left + spotlightStyle.width / 2}px ${spotlightStyle.top + spotlightStyle.height / 2}px, transparent 60%, black 75%)`
-                : "none",
-            }}
+            className="fixed inset-0 z-[80] bg-black/40 backdrop-blur-[2px]"
+            onClick={finish}
           />
 
-          {/* Spotlight ring around target */}
-          {spotlightStyle && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed z-[81] rounded-xl pointer-events-none"
-              style={{
-                ...spotlightStyle,
-                boxShadow: `0 0 0 3px ${currentStep.color}, 0 0 24px color-mix(in srgb, ${currentStep.color} 50%, transparent)`,
-              }}
-            />
-          )}
-
-          {/* Tooltip */}
+          {/* Card — centered, compact, never overlaps content it describes */}
           <motion.div
             key={step}
-            initial={{ opacity: 0, scale: 0.92, y: 6 }}
+            initial={{ opacity: 0, scale: 0.94, y: 12 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.92 }}
-            transition={{ duration: 0.2 }}
-            className="fixed z-[82] w-[280px] bg-card border border-card-foreground/10 rounded-2xl shadow-2xl p-5"
-            style={tooltipStyle()}
+            exit={{ opacity: 0, scale: 0.94, y: 12 }}
+            transition={{ duration: 0.22, ease: "easeOut" }}
+            className="fixed z-[81] inset-0 flex items-center justify-center p-5 pointer-events-none"
           >
-            {/* Arrow indicator */}
-            {currentStep.placement === "bottom" && (
-              <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-4 h-2 overflow-hidden">
-                <div className="w-3 h-3 bg-card border-l border-t border-card-foreground/10 rotate-45 translate-y-1 mx-auto" />
-              </div>
-            )}
-            {currentStep.placement === "left" && (
-              <div className="absolute -right-2 top-1/2 -translate-y-1/2 w-2 h-4 overflow-hidden">
-                <div className="w-3 h-3 bg-card border-r border-t border-card-foreground/10 rotate-45 -translate-x-1 my-auto" />
-              </div>
-            )}
-
-            {/* Header */}
-            <div className="flex items-center gap-2.5 mb-3">
-              <div
-                className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
-                style={{
-                  backgroundColor: `color-mix(in srgb, ${currentStep.color} 15%, var(--card))`,
-                  boxShadow: `0 0 12px color-mix(in srgb, ${currentStep.color} 30%, transparent)`,
-                }}
-              >
-                <Icon className="size-4" style={{ color: currentStep.color }} />
-              </div>
-              <span className="text-display text-[0.9rem]">{currentStep.title}</span>
-              <button
-                onClick={finish}
-                className="ml-auto text-muted-foreground hover:text-foreground"
-              >
-                <X className="size-3.5" />
-              </button>
-            </div>
-
-            <p className="text-[0.82rem] text-muted-foreground leading-relaxed mb-4">
-              {currentStep.text}
-            </p>
-
-            {/* Footer */}
-            <div className="flex items-center justify-between">
-              {/* Dots */}
-              <div className="flex gap-1.5">
-                {STEPS.map((_, i) => (
-                  <div
-                    key={i}
-                    className="w-1.5 h-1.5 rounded-full transition-colors"
-                    style={{
-                      backgroundColor: i === step ? currentStep.color : "var(--border)",
-                    }}
-                  />
-                ))}
-              </div>
-
-              <div className="flex items-center gap-2">
+            <div
+              className="w-full max-w-[340px] bg-card border border-card-foreground/10 rounded-2xl shadow-2xl p-6 pointer-events-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Icon */}
+              <div className="flex items-center justify-between mb-5">
+                <div
+                  className="w-11 h-11 rounded-xl flex items-center justify-center"
+                  style={{
+                    backgroundColor: `color-mix(in srgb, ${current.color} 15%, var(--card))`,
+                    boxShadow: `0 0 18px color-mix(in srgb, ${current.color} 35%, transparent)`,
+                  }}
+                >
+                  <Icon className="size-5" style={{ color: current.color }} />
+                </div>
                 <button
                   onClick={finish}
-                  className="text-xs text-muted-foreground hover:text-foreground"
+                  className="text-muted-foreground hover:text-foreground p-1"
                 >
-                  Saltar
+                  <X className="size-4" />
                 </button>
-                <Button
-                  size="sm"
-                  onClick={next}
-                  className="h-7 text-xs gap-1.5 px-3"
-                  style={{ backgroundColor: currentStep.color }}
-                >
-                  {isLast ? "¡Listo!" : "Siguiente"}
-                  {!isLast && <ArrowRight className="size-3" />}
-                </Button>
+              </div>
+
+              {/* Text */}
+              <h3 className="text-display text-[1.05rem] mb-2">{current.title}</h3>
+              <p className="text-[0.85rem] text-muted-foreground leading-relaxed mb-3">
+                {current.text}
+              </p>
+
+              {/* Hint — subtle directional cue */}
+              <p
+                className="text-[0.75rem] font-semibold mb-5 px-3 py-2 rounded-lg"
+                style={{
+                  color: current.color,
+                  backgroundColor: `color-mix(in srgb, ${current.color} 10%, var(--card))`,
+                }}
+              >
+                {current.hint}
+              </p>
+
+              {/* Footer */}
+              <div className="flex items-center justify-between">
+                {/* Progress dots */}
+                <div className="flex gap-1.5">
+                  {STEPS.map((_, i) => (
+                    <div
+                      key={i}
+                      className={cn(
+                        "rounded-full transition-all",
+                        i === step ? "w-4 h-1.5" : "w-1.5 h-1.5"
+                      )}
+                      style={{
+                        backgroundColor: i === step ? current.color : "var(--border)",
+                      }}
+                    />
+                  ))}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={finish}
+                    className="text-xs text-muted-foreground hover:text-foreground"
+                  >
+                    Saltar
+                  </button>
+                  <Button
+                    size="sm"
+                    onClick={next}
+                    className="h-7 text-xs gap-1.5 px-3 border-0"
+                    style={{ backgroundColor: current.color }}
+                  >
+                    {isLast ? "¡Listo!" : "Siguiente"}
+                    {!isLast && <ArrowRight className="size-3" />}
+                  </Button>
+                </div>
               </div>
             </div>
           </motion.div>
