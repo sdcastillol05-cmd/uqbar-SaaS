@@ -31,6 +31,7 @@ export function GeneradorQR({
 }: GeneradorQRProps) {
   const canvasRef      = useRef<HTMLCanvasElement>(null);
   const [ready, setReady] = useState(false);
+  const [dataUrl, setDataUrl] = useState<string | null>(null);
   const [showFull, setShowFull] = useState(false);
 
   const encuestaUrl = `${window.location.origin}/encuesta/${negocioId}`;
@@ -148,6 +149,7 @@ export function GeneradorQR({
     } catch { /* sin logo google */ }
 
     setReady(true);
+    setDataUrl(canvas.toDataURL("image/png", 1.0));
   }, [encuestaUrl, nombreNegocio, mapsUrl]);
 
   useEffect(() => {
@@ -218,14 +220,16 @@ export function GeneradorQR({
       </p>
 
       {/* Modal pantalla completa para mostrar al cliente */}
-      {showFull && (
+      {showFull && dataUrl && (
         <div
           className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
           onClick={() => setShowFull(false)}
         >
-          <canvas
-            ref={canvasRef}
-            className="max-w-full max-h-full object-contain rounded-2xl"
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={dataUrl}
+            alt="QR Uqbar"
+            className="max-w-full object-contain rounded-2xl"
             style={{ maxHeight: "90vh", width: "auto" }}
             onClick={(e) => e.stopPropagation()}
           />
