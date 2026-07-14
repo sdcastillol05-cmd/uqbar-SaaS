@@ -21,6 +21,7 @@ import {
   useAnotaciones,
   useRecordatorios,
 } from "@/hooks/use-clientes";
+import { CalendarioRecordatorios } from "@/components/calendario/calendario-recordatorios";
 import type { Cliente, RecordatorioConCliente } from "@/lib/types-clientes";
 import { cn } from "@/lib/utils";
 
@@ -29,13 +30,11 @@ const TODAY = new Date().toISOString().split("T")[0];
 function fmtFecha(iso: string) {
   return new Date(iso).toLocaleDateString("es-CO", {
     day: "numeric", month: "short", year: "numeric",
-    timeZone: "America/Bogota",
   });
 }
 function fmtFechaHora(iso: string) {
   return new Date(iso).toLocaleString("es-CO", {
     day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
-    timeZone: "America/Bogota",
   });
 }
 
@@ -85,7 +84,10 @@ export function ClientesScreen({
         <div className="absolute -bottom-1 left-0 w-40 h-px bg-gradient-to-r from-primary via-[#00bbff] to-transparent opacity-50" />
       </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-4 items-start">
+      {/* 3-column layout on large screens: list | detail | calendar
+          The calendar column is hidden on mobile (hidden lg:block) so it
+          never breaks the mobile view. */}
+      <div className="grid grid-cols-1 lg:grid-cols-[340px_1fr_260px] gap-4 items-start">
 
         {/* ── LISTA DE CLIENTES ── */}
         <Card className="p-0 gap-0 overflow-hidden border-card-foreground/5">
@@ -225,6 +227,15 @@ export function ClientesScreen({
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* ── CALENDARIO — solo desktop, oculto en móvil ── */}
+        <div className="hidden lg:flex flex-col gap-3">
+          <div className="flex items-center gap-2 px-1">
+            <Calendar className="size-4 text-muted-foreground" />
+            <span className="text-display text-sm">Recordatorios</span>
+          </div>
+          <CalendarioRecordatorios recordatorios={recordatorios} />
+        </div>
       </div>
 
       {/* ── MODAL NUEVO CLIENTE ── */}
@@ -647,12 +658,8 @@ function FormNuevoRecordatorio({
 
   async function handle() {
     if (!motivo.trim() || !fecha || !hora) return;
-    // Colombia is UTC-5. We append the offset explicitly so that
-    // `new Date(...)` interprets the user's local time correctly
-    // regardless of where the Next.js server is running (Vercel = UTC).
-    // "2026-07-12T12:01:00-05:00" → stored as "2026-07-12T17:01:00.000Z"
-    // so the cron (which runs in UTC) fires at exactly the right moment.
-    const localStr = `${fecha}T${hora}:00-05:00`;
+    // Convertir fecha + hora local (Colombia UTC-5) a ISO UTC
+    const localStr = `${fecha}T${hora}:00`;
     const fechaUTC = new Date(localStr).toISOString();
     setSaving(true);
     await onSubmit({ motivo: motivo.trim(), fecha_envio: fechaUTC });
