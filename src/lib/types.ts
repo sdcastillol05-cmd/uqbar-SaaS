@@ -8,7 +8,7 @@ export interface Movimiento {
   concepto: string;
   valor: number;
   nota: string | null;
-  fecha: string; // YYYY-MM-DD
+  fecha: string;
   medio_pago: MedioPago;
   cliente: string | null;
   es_fiado: boolean;
@@ -20,6 +20,8 @@ export interface Perfil {
   user_id: string;
   nombre_negocio: string;
   email: string;
+  maps_url?: string | null;
+  onboarding_completado?: boolean;  // ← nuevo campo
   created_at: string;
 }
 

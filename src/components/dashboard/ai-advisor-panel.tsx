@@ -20,7 +20,7 @@ export function AIAdvisorPanel({
   onRefresh,
 }: AIAdvisorPanelProps) {
   return (
-    <Card className="relative p-0 gap-0 overflow-hidden border-card-foreground/5">
+    <Card className="relative p-0 gap-0 overflow-hidden border-card-foreground/5" data-onboarding="ai-panel">
       {/* Abstract gradient glow living behind the whole card */}
       <div
         className="pointer-events-none absolute -top-24 -right-20 w-72 h-72 rounded-full blur-3xl opacity-30"
