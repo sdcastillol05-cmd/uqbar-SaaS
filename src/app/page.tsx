@@ -10,6 +10,7 @@ import { Navbar } from "@/components/dashboard/navbar";
 import { OnboardingTour } from "@/components/onboarding/onboarding-tour";
 import { useTheme } from "@/hooks/use-theme";
 import { useToast } from "@/hooks/use-toast";
+import { useNotificaciones } from "@/hooks/use-notificaciones";
 import { LayoutDashboard, Users, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -20,6 +21,13 @@ export default function Home() {
   const { theme, toggleTheme } = useTheme();
   const { showToast, ToastPortal } = useToast();
   const [tab, setTab] = useState<Tab>("dashboard");
+
+  const {
+    notificaciones,
+    count: notifCount,
+    descartar,
+    descartarTodas,
+  } = useNotificaciones(user?.id);
 
   if (loading) {
     return (
@@ -37,7 +45,6 @@ export default function Home() {
   if (!user) return <LoginScreen />;
 
   const businessName = perfil?.nombre_negocio || "Mi negocio";
-  // Show tour only once — when onboarding_completado is false/null
   const showOnboarding = perfil !== null && !perfil?.onboarding_completado;
 
   async function handleRename(newName: string) {
@@ -49,9 +56,9 @@ export default function Home() {
   }
 
   const TABS = [
-    { key: "dashboard" as Tab, label: "Resumen",  icon: LayoutDashboard, onboarding: undefined },
-    { key: "clientes"  as Tab, label: "Clientes", icon: Users,           onboarding: "tab-clientes" },
-    { key: "reseñas"   as Tab, label: "Reseñas",  icon: Star,            onboarding: "tab-resenas" },
+    { key: "dashboard" as Tab, label: "Resumen",  icon: LayoutDashboard },
+    { key: "clientes"  as Tab, label: "Clientes", icon: Users },
+    { key: "reseñas"   as Tab, label: "Reseñas",  icon: Star },
   ];
 
   return (
@@ -62,16 +69,16 @@ export default function Home() {
         onToggleTheme={toggleTheme}
         onLogout={signOut}
         onRenameBusiness={handleRename}
+        notificaciones={notificaciones}
+        notifCount={notifCount}
+        onDescartar={descartar}
+        onDescartarTodas={descartarTodas}
       />
 
-      {/* Tab bar — data-onboarding attributes let the tour find these elements */}
       <div className="border-b bg-background/85 backdrop-blur-xl sticky top-[56px] z-40">
         <div className="max-w-[1320px] mx-auto px-8 flex">
-          {TABS.map(({ key, label, icon: Icon, onboarding }) => (
-            <button
-              key={key}
-              onClick={() => setTab(key)}
-              data-onboarding={onboarding}
+          {TABS.map(({ key, label, icon: Icon }) => (
+            <button key={key} onClick={() => setTab(key)}
               className={cn(
                 "flex items-center gap-2 px-4 py-3.5 text-sm font-semibold border-b-2 transition-colors",
                 tab === key
@@ -94,15 +101,10 @@ export default function Home() {
         <ReseñasScreen userId={user.id} nombreNegocio={businessName} showToast={showToast} />
       )}
 
-      {/* Onboarding tour — shown only on first login */}
       {showOnboarding && (
         <OnboardingTour
           userId={user.id}
-          onComplete={() => {
-            // perfil will re-read from Supabase on next auth state change,
-            // but we force a quick local re-check by reloading the page once.
-            window.location.reload();
-          }}
+          onComplete={() => window.location.reload()}
         />
       )}
 
