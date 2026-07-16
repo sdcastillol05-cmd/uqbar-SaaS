@@ -24,12 +24,13 @@ export function useNotificaciones(userId: string | undefined) {
     setLoading(false);
   }, [userId]);
 
-  // Fetch unread notifications
+  // Fetch + Realtime subscription
   useEffect(() => {
     if (!userId) return;
     let cancelled = false;
     setLoading(true);
 
+    // Initial fetch
     supabase
       .from("notificaciones")
       .select("*")
@@ -43,13 +44,36 @@ export function useNotificaciones(userId: string | undefined) {
         setLoading(false);
       });
 
-    return () => { cancelled = true; };
+    // Realtime subscription — fires instantly when a new row is inserted
+    // by the AI cron, the system, or any Edge Function.
+    const channel = supabase
+      .channel(`notificaciones:${userId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "notificaciones",
+          filter: `user_id=eq.${userId}`,
+        },
+        (payload) => {
+          // New notification arrived — prepend it to the list
+          const nueva = payload.new as Notificacion;
+          if (!nueva.leida) {
+            setNotificaciones((prev) => [nueva, ...prev]);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      cancelled = true;
+      supabase.removeChannel(channel);
+    };
   }, [userId]);
 
   const descartar = useCallback(async (id: string) => {
-    // Optimistic update — remove immediately from UI
     setNotificaciones((prev) => prev.filter((n) => n.id !== id));
-    // Mark as read in Supabase
     await supabase
       .from("notificaciones")
       .update({ leida: true })
@@ -66,19 +90,20 @@ export function useNotificaciones(userId: string | undefined) {
       .in("id", ids);
   }, [userId, notificaciones]);
 
-  // Allow other parts of the app to push a local notification
-  // (e.g. after the AI analysis runs)
-  const pushLocal = useCallback((n: Omit<Notificacion, "id" | "leida" | "created_at">) => {
-    setNotificaciones((prev) => [
-      {
-        ...n,
-        id: crypto.randomUUID(),
-        leida: false,
-        created_at: new Date().toISOString(),
-      },
-      ...prev,
-    ]);
-  }, []);
+  const pushLocal = useCallback(
+    (n: Omit<Notificacion, "id" | "leida" | "created_at">) => {
+      setNotificaciones((prev) => [
+        {
+          ...n,
+          id: crypto.randomUUID(),
+          leida: false,
+          created_at: new Date().toISOString(),
+        },
+        ...prev,
+      ]);
+    },
+    []
+  );
 
   return {
     notificaciones,
