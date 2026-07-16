@@ -8,10 +8,10 @@ const eslintConfig = defineConfig([
   {
     // Data-fetching hooks that legitimately call setState before/after
     // an async Supabase fetch — the canonical useEffect pattern.
-    // See eslint.config.mjs comment in use-movimientos.ts for full rationale.
     files: [
       "src/hooks/use-movimientos.ts",
       "src/hooks/use-clientes.ts",
+      "src/hooks/use-notificaciones.ts",
     ],
     rules: {
       "react-hooks/set-state-in-effect": "off",
